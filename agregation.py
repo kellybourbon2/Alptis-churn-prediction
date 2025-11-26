@@ -1,9 +1,12 @@
-#Ici se trouve les fonctions d'agrégation des fichiers secondaires
+#Ici se trouveny les fonctions d'agrégation des fichiers secondaires
 #  (impayés, réclamations, interaction, consommations)
+#Pour voir l'explication détaillée des démarches employées, se réferer au notebook de chaque fichier
+
+
 import pandas as pd
 
 
-def agregate_reclamations(df_reclamations):
+def aggregate_reclamations(df_reclamations):
     """
     Agrège le fichier "réclamations" par client_code 
 
@@ -174,7 +177,7 @@ def agregate_reclamations(df_reclamations):
     return df_agg
 
 
-def agregate_consommations(df_consommations):
+def aggregate_consommations(df_consommations):
     """
     Agrège les consommations par client et construit une structure
     d'informations détaillées par date (annee_mois_paiement).
