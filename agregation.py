@@ -1,9 +1,9 @@
 #Ici se trouve les fonctions d'agrégation des fichiers secondaires
-#  (impayés, réclamations, interractions, consommations)
+#  (impayés, réclamations, interaction, consommations)
 import pandas as pd
 
 
-def agregation_reclamations(df_reclamations):
+def agregate_reclamations(df_reclamations):
     """
     Agrège le fichier "réclamations" par client_code 
 
@@ -173,7 +173,8 @@ def agregation_reclamations(df_reclamations):
     # ============================================================
     return df_agg
 
-def agregation_consommations(df_consommations):
+
+def agregate_consommations(df_consommations):
     """
     Agrège les consommations par client et construit une structure
     d'informations détaillées par date (annee_mois_paiement).
@@ -256,3 +257,232 @@ def agregation_consommations(df_consommations):
     )
 
     return df_agg
+
+def aggregate_interaction(df_interaction):
+    """
+    Prend en input le DataFrame des interactions et l'agrège, selon méthode détaillée dans
+    agregation_interactions.ipynb. Renvoie le DataFrame agrégé.
+
+    Cette fonction génère, pour chaque client :
+    - interaction_nb_total : nombre total d'interaction
+    - variables motifs : sept motifs les plus fréquents + 'interaction_motif_autre'
+    - variables services : trois services les plus fréquents + 'interaction_autres_services'
+    - interaction_canal_telephone_nb : nombre d'interaction effectuées par téléphone
+    - variables transferts : comptage des demandes transférées (4 indicateurs)
+    - interaction_historique_mail : dictionnaire {date : contenu_mail} pour les interaction e-mail
+
+    Retourne un dataframe final 'df_interaction_agg' contenant toutes ces
+    informations, avec client_code en colonne.
+    """
+
+    # 1) NB INTERACTIONS TOTAL
+    interaction_nb_total = (
+        df_interaction
+        .groupby("client_code")
+        .size()
+        .to_frame("interaction_nb_total")
+    )
+
+    # 2) MOTIFS (8 variables)
+    top7 = [
+        "Frais courants",
+        "Dentaire",
+        "Hospitalisation",
+        "Télétransmission",
+        "Médecine douce",
+        "Tiers payant",
+        "Optique"
+    ]
+
+    df = df_interaction.copy()
+    df["motif_simplifie"] = df["interaction_motif"].apply(
+        lambda x: x if x in top7 else "interaction_motif_autre"
+    )
+
+    df_motif = (
+        df.groupby(["client_code", "motif_simplifie"])
+          .size()
+          .unstack(fill_value=0)
+    )
+
+    df_motif = df_motif.rename(columns={
+        "Frais courants": "interaction_motif_frais_courants",
+        "Dentaire": "interaction_motif_dentaire",
+        "Hospitalisation": "interaction_motif_hospitalisation",
+        "Télétransmission": "interaction_motif_teletransmission",
+        "Médecine douce": "interaction_motif_medecine_douce",
+        "Tiers payant": "interaction_motif_tiers_payant",
+        "Optique": "interaction_motif_optique",
+        "interaction_motif_autre": "interaction_motif_autre"
+    })
+
+    # 3) SERVICES
+    top3_services = [
+        "Prestations santé",
+        "Suivi du contrat",
+        "Cotisations & Recouvrements"
+    ]
+
+    df["interaction_service_simplifie"] = df["interaction_service"].apply(
+        lambda x: x if x in top3_services else "interaction_autres_services"
+    )
+
+    df_service = (
+        df.groupby(["client_code", "interaction_service_simplifie"])
+          .size()
+          .unstack(fill_value=0)
+    )
+
+    df_service = df_service.rename(columns={
+        "Prestations santé": "interaction_service_prestations_sante",
+        "Suivi du contrat": "interaction_service_suivi_du_contrat",
+        "Cotisations & Recouvrements": "interaction_service_cotisations_recouvrements",
+        "interaction_autres_services": "interaction_autres_services"
+    })
+
+    # 4) CANAL TELEPHONE
+    df_tel = df[df["interaction_canal"] == "Téléphone"]
+
+    df_canal = (
+        df_tel.groupby("client_code")
+              .size()
+              .to_frame("interaction_canal_telephone_nb")
+    )
+
+    df_canal["interaction_canal_telephone_nb"] = df_canal["interaction_canal_telephone_nb"].fillna(0)
+
+    # 5) TRANSFERTS
+    dummies_transfert = [
+        "interaction_est_transferee_service_reclamation",
+        "interaction_est_transferee_service_gestion",
+        "interaction_est_transferee_service_commercial",
+        "interaction_est_externalisee"
+    ]
+
+    df_transfert = (
+        df.groupby("client_code")[dummies_transfert]
+          .sum()
+    )
+
+    df_transfert = df_transfert.rename(columns={
+        "interaction_est_transferee_service_reclamation": "interaction_nb_transferts_reclamation",
+        "interaction_est_transferee_service_gestion": "interaction_nb_transferts_gestion",
+        "interaction_est_transferee_service_commercial": "interaction_nb_transferts_commercial",
+        "interaction_est_externalisee": "interaction_nb_transferts_externalises"
+    })
+
+    # 6) HISTORIQUE MAILS
+    df_mail = df[df["interaction_canal"] == "E-mail"]
+
+    if df_mail.empty:
+        df_interaction_historique_mail = pd.DataFrame({"interaction_historique_mail": {}})
+    else:
+        df_interaction_historique_mail = df_mail.groupby("client_code").apply(
+            lambda x: dict(zip(x["interaction_date"], x["interaction_texte_mail"]))
+        ).to_frame("interaction_historique_mail")
+
+    # 7) JOIN FINAL
+    df_interaction_agg = interaction_nb_total.join(df_motif, how="left")
+    df_interaction_agg = df_interaction_agg.join(df_service, how="left")
+    df_interaction_agg = df_interaction_agg.join(df_canal, how="left")
+    df_interaction_agg = df_interaction_agg.join(df_transfert, how="left")
+    df_interaction_agg = df_interaction_agg.join(df_interaction_historique_mail, how="left")
+
+    # 8) Nettoyage
+    for col in df_interaction_agg.columns:
+        if col != "interaction_historique_mail":
+            df_interaction_agg[col] = df_interaction_agg[col].fillna(0)
+
+    df_interaction_agg["interaction_historique_mail"] = df_interaction_agg["interaction_historique_mail"].apply(
+        lambda x: {} if isinstance(x, float) else x
+    )
+
+    # 9) Mettre client_code comme colonne et non index
+    df_interaction_agg = df_interaction_agg.reset_index()
+
+    return df_interaction_agg
+
+                            ###  FONCTION FINALE ###
+                            ########################
+
+def aggregate_impayes(df_impayes):
+    """
+    Agrège les données d'impayés au niveau client :
+    - impaye_nb_actions
+    - impaye_montant_total
+    - compteurs pour chaque type d'action (impaye_action_...)
+    - impaye_impaye_duree_max_action_jours
+    """
+
+    df = df_impayes.copy()
+
+    # Dates en datetime
+    df["impaye_date_debut_action"] = pd.to_datetime(df["impaye_date_debut_action"])
+    df["impaye_date_fin_action"] = pd.to_datetime(df["impaye_date_fin_action"])
+
+    # Durée de l'action
+    df["impaye_duree_action_jours"] = (
+        df["impaye_date_fin_action"] - df["impaye_date_debut_action"]
+    ).dt.days
+
+    # 1) Nombre total d'actions
+    nb_actions = (
+        df.groupby("client_code")
+          .size()
+          .to_frame("impaye_nb_actions")
+    )
+
+    # 2) Montant total
+    montant_total = (
+        df.groupby("client_code")["impaye_montant_cotisation_impayee"]
+          .sum()
+          .to_frame("impaye_montant_total")
+    )
+
+    # 3) Compteurs des types d’action (pivot)
+    df_types = (
+        df.groupby(["client_code", "impaye_type_action"])
+          .size()
+          .unstack(fill_value=0)
+    )
+
+    # Mapping des noms propres
+    mapping_actions = {
+        "1er Impayé": "impaye_action_1er_impaye",
+        "1ere lettre de relance": "impaye_action_1ere_lettre_relance",
+        "Mise en demeure": "impaye_action_mise_en_demeure",
+        "2ème Impayé": "impaye_action_2eme_impaye",
+        "Suspension de garanties": "impaye_action_suspension_garanties",
+        "Annonce du contentieux": "impaye_action_annonce_contentieux",
+        "En recouvrement": "impaye_action_en_recouvrement"
+    }
+
+    # Renommage
+    df_types = df_types.rename(columns=mapping_actions)
+
+    # Si d'autres types existent → renommer proprement
+    df_types = df_types.rename(columns=lambda x: "nb_" + x.lower()
+                                                 .replace(" ", "_")
+                                                 .replace("é", "e")
+                                                 .replace("è", "e")
+                                                 .replace("ê", "e")
+                                                 .replace("à", "a")
+                                                 if x not in mapping_actions else x)
+
+    # 4) Durée maximale
+    duree_max = (
+        df.groupby("client_code")["impaye_duree_action_jours"]
+          .max()
+          .to_frame("impaye_duree_max_action_jours")
+    )
+
+    # Assemblage final
+    df_impayes_agg = (
+        nb_actions
+        .join(montant_total, how="left")
+        .join(df_types, how="left")
+        .join(duree_max, how="left")
+        .reset_index()
+    )
+
+    return df_impayes_agg
