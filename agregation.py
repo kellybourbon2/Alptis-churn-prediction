@@ -261,6 +261,7 @@ def aggregate_consommations(df_consommations):
 
     return df_agg
 
+
 def aggregate_interaction(df_interaction):
     """
     Prend en input le DataFrame des interactions et l'agrège, selon méthode détaillée dans
@@ -407,6 +408,7 @@ def aggregate_interaction(df_interaction):
 
                             ###  FONCTION FINALE ###
                             ########################
+
 
 def aggregate_impayes(df_impayes):
     """
