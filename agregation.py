@@ -6,12 +6,11 @@
 import pandas as pd
 
 
-def aggregate_reclamations(df_reclamations):
+def aggregation_reclamations(df_reclamations):
     """
-    Agrège le fichier "réclamations" par client_code 
-
-    Méthode d'agrégation:
-      détaillée dans le notebook "démarche_aggregation.ipynb"
+    Agrège les réclamations par client_code avec création d’indicateurs
+    (motifs, canaux, sensibilité, initiateur, délais…) selon la méthode présentée dans
+    le notebook "reclamation_aggregation.ipynb"
 
     Arg: 
     df_reclamations: DataFrame, contient le fichier des réclamations non aggrégé
@@ -31,23 +30,18 @@ def aggregate_reclamations(df_reclamations):
     )
 
     # ============================================================
-    # ÉTAPE 2 — Motifs par thème & canaux principal/secondaire
+    # ÉTAPE 2 — Colonnes sur motifs principaux & canaux principal/secondaire
     # ============================================================
-    themes = df_reclamations["recla_theme"].dropna().unique()
-
-    def motifs_par_theme(df_client):
-        return {
-            theme: df_client.loc[df_client["recla_theme"] == theme, "recla_motif"].unique().tolist()
-            for theme in themes
-        }
-
-    df_theme_motifs = (
-        df_reclamations
-        .groupby("client_code")
-        .apply(motifs_par_theme)
-        .apply(pd.Series)
-        .add_prefix("recla_theme_")
-    )
+    motifs = df_reclamations["recla_motif"].dropna().unique()
+    
+    #One hot encoding of motif columns, and creation of recla_motif_Autre for non top5 motif
+    df_reclamations=pd.get_dummies(df_reclamations, columns=["recla_motif"], dtype=int) 
+    colonnes_motif = [c for c in df_reclamations.columns if (c.startswith("recla_motif_")) & (c not in ["recla_motif_acpr","recla_motif_sensibilite"])]
+    top5 = df_reclamations[colonnes_motif].sum().sort_values(ascending=False).head(5).index.tolist()
+    autres = list(set(colonnes_motif) - set(top5))
+    df_reclamations["recla_motif_Autre"] = df_reclamations[autres].sum(axis=1)
+    colonnes_motif =  top5 + ["recla_motif_Autre","client_code"]
+    df_motifs = df_reclamations.groupby("client_code")[top5 + ["recla_motif_Autre"]].sum().reset_index()
 
     # Canal principal (mode)
     canal_principal = (
@@ -72,7 +66,7 @@ def aggregate_reclamations(df_reclamations):
     # Fusion des résultats étape 2
     df_agg = (
         df_agg
-        .merge(df_theme_motifs, on="client_code", how="left")
+        .merge(df_motifs, on="client_code", how="left")
         .merge(canal_principal, on="client_code", how="left")
         .merge(canal_secondaire, on="client_code", how="left")
     )
@@ -175,6 +169,7 @@ def aggregate_reclamations(df_reclamations):
     # FIN — Retour du dataframe agrégé final
     # ============================================================
     return df_agg
+
 
 
 def aggregate_consommations(df_consommations):
