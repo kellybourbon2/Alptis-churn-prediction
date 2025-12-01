@@ -6,7 +6,7 @@
 import pandas as pd
 
 
-def aggregation_reclamations(df_reclamations):
+def aggregate_reclamations(df_reclamations):
     """
     Agrège les réclamations par client_code avec création d’indicateurs
     (motifs, canaux, sensibilité, initiateur, délais…) selon la méthode présentée dans
@@ -33,7 +33,6 @@ def aggregation_reclamations(df_reclamations):
     # ÉTAPE 2 — Colonnes sur motifs principaux & canaux principal/secondaire
     # ============================================================
     motifs = df_reclamations["recla_motif"].dropna().unique()
-    
     #One hot encoding of motif columns, and creation of recla_motif_Autre for non top5 motif
     df_reclamations=pd.get_dummies(df_reclamations, columns=["recla_motif"], dtype=int) 
     colonnes_motif = [c for c in df_reclamations.columns if (c.startswith("recla_motif_")) & (c not in ["recla_motif_acpr","recla_motif_sensibilite"])]
