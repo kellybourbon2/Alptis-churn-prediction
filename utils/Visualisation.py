@@ -38,22 +38,10 @@ def plot_hist_top_k(df, cols, k):
         plt.show()
 
 def cramers_v(x, y):
+  #Corriger
   "Performs cramers test and plot corelation matrix "
-    table = pd.crosstab(x, y)
-    chi2 = chi2_contingency(table)[0]
-    n = table.sum().sum()
-    r, k = table.shape
-    return np.sqrt(chi2 / (n * (min(r - 1, k - 1))))
-    cat_vars= df.select_dtypes(include=["object", "category"]).columns
-    cat_vars=[cat for cat in cat_vars if cat.startswith("client") and not cat.startswith("client_nps")]
-    matrix = pd.DataFrame(np.zeros((len(cat_vars), len(cat_vars))),
-                          index=cat_vars, columns=cat_vars)
-    for col1 in cat_vars:
-        for col2 in cat_vars:
-            matrix.loc[col1, col2] = cramers_v(df[col1], df[col2])
-
-      #Visualisation
-      plt.figure(figsize=(10,8))
-      sns.heatmap(matrix, annot=True, cmap="coolwarm", vmin=0, vmax=1)
-      plt.title("Matrice de corrélation entre variables catégorielles sur client (Cramer's V)")
-      plt.show()
+  table = pd.crosstab(x, y)
+  chi2 = chi2_contingency(table)[0]
+  n = table.sum().sum()
+  r, k = table.shape
+  return np.sqrt(chi2 / (n * (min(r - 1, k - 1))))

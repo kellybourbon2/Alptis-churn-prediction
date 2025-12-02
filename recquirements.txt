@@ -26,3 +26,4 @@ wordcloud
 
 python-dateutil
 ipykernel
+fsspec

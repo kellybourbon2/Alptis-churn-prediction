@@ -1,1 +1,4 @@
-df_agregate.csv
+*.csv
+Course3_Machine_Learning_Hi6.ipynb
+__pycache__/
+alptis_kb_env/
