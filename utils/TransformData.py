@@ -8,6 +8,16 @@ import os
 from typing import Union
 import requests
 
+def make_binary_numeric(col):
+    """Fonction robuste qui transforme les colonnes avec exactement deux valeurs uniques 
+        en colonnes binaires 0/1: si la colonne est déjà au format 0/1, rien n'est changé """
+    if np.issubdtype(col.dtype, np.number) and set(col.dropna().unique()) <= {0, 1}:
+        return col.astype(int)
+    elif col.nunique() == 2:
+        vals = list(col.dropna().unique())
+        return (col == vals[0]).astype(int)
+    else:
+        return col
 
 # Class : Custom context manager - open files
 class FileManager:
@@ -260,3 +270,5 @@ def code_insee_from_communes_as_dict(code_postal: str):
         code_postal = ''
         code_insee = ''
         return code_postal, code_insee
+
+    

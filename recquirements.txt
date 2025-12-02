@@ -16,7 +16,7 @@ transformers==4.44.0
 sentencepiece
 accelerate
 
-spacy==3.7.4
+spacy
 spacy-transformers
 fr-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.7.0/fr_core_news_sm-3.7.0-py3-none-any.whl
 fr-core-news-md @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_md-3.7.0/fr_core_news_md-3.7.0-py3-none-any.whl
