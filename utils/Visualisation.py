@@ -32,6 +32,8 @@ def plot_hist_top_k(df, cols, k):
             order= plot_df[col].tolist(),
             palette='viridis'
         )
+        for a, b in zip(col,y):
+
         plt.title(f"Top {k} valeurs de '{col}' (en %)")
         plt.xticks(rotation=30, ha='right')
         plt.tight_layout()
