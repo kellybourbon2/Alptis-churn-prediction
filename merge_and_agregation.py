@@ -3,6 +3,7 @@
 #Pour voir l'explication détaillée des démarches employées, se réferer au notebook de chaque fichier
 
 import pandas as pd
+from utils.TransformData import make_binary_numeric
 
 def aggregate_reclamations(df_reclamations):
     """
@@ -484,14 +485,51 @@ def aggregate_impayes(df_impayes):
 
     return df_impayes_agg
 
+def portefeuille_cleaning(df_portefeuille):
+    """ 
+    Take the portefeuille DataFrame as argument. 
+    Clean the portefeuille DataFrame based on the 
+    observations and methods detailed in the notebook Data_quality_and_cleaning.ipynb.
+    """
+
+    df_portefeuille_cleaned = df_portefeuille.copy()
+
+    # 1 - Creating boolean columns
+    df_portefeuille_cleaned["client_male_souscripteur"] = make_binary_numeric(df_portefeuille_cleaned["client_sexe_souscripteur"])
+    df_portefeuille_cleaned["client_demenagement_dans_les_12_mois"] = df_portefeuille_cleaned["client_departement_avant_changement_12_mois"].notna().astype(int)
+    df_portefeuille_cleaned["courtier_changement_dans_les_12_mois"] = df_portefeuille_cleaned["courtier_code_avant_changement_12_mois"].notna().astype(int)
+
+    # Drop old columns
+    df_portefeuille_cleaned.drop(columns=[
+        "client_sexe_souscripteur",
+        "client_departement_avant_changement_12_mois",
+        "courtier_code_avant_changement_12_mois"
+    ], inplace=True)
+
+    # 2 - Replacing "00" in client_departement by NaN
+    df_portefeuille_cleaned["client_departement"].replace("00", pd.NA, inplace=True)
+
+    # 3 - Imputing missing values in courtier_type_commission based on courtier_code_apporteur
+    mode_par_courtier = (
+        df_portefeuille_cleaned.groupby("courtier_code_apporteur")["courtier_type_commission"]
+        .agg(lambda x: x.mode().iloc[0] if not x.mode().empty else pd.NA)
+    )
+
+    df_portefeuille_cleaned["courtier_type_commission"] = df_portefeuille_cleaned["courtier_type_commission"].fillna(
+        df_portefeuille_cleaned["courtier_code_apporteur"].map(mode_par_courtier)
+    )
+
+    return df_portefeuille_cleaned
 
 
-def agregate_and_merge(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes):
+
+def create_clean_aggregated_dataset(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes):
     
     """Functions that take all the table as input and : 
-    1. agregate the secondary files so they only have a unique "client_code" per line
-    2. Left-merge all the secondary files with the portefeuille file
-    3. DataCleaning (filling of na values on certain columns when it makes sens)
+    1. Clean the portfolio file 
+    2. agregate the secondary files so they only have a unique "client_code" per line
+    3. Left-merge all the secondary files with the portefeuille file
+    4. Clean the secondary files (filling of na values on certain columns when it makes sens)
     Args: 
        df_portefeuille: DataFrame of portefeuille
        df_consommations: non agregate DataFrame of consommations
@@ -502,27 +540,32 @@ def agregate_and_merge(df_portefeuille, df_consommations, df_reclamations, df_in
        Dataframe of agregate and merged tables.
 
     """
+    #1_Data cleaning in portfolio file
+    df_portefeuille= portefeuille_cleaning(df_portefeuille)
 
-    #1_agregation of all secondary files
+    #2_agregation of all secondary files
     df_consommations = aggregate_consommations(df_consommations)
     df_reclamations  = aggregate_reclamations(df_reclamations)
     df_impayes       = aggregate_impayes(df_impayes)
     df_interactions  = aggregate_interaction(df_interactions)
 
 
-    #2_merge of function on client_code
+    #3_merge of function on client_code
     df = df_portefeuille.copy()
     for other in [df_reclamations, df_consommations, df_impayes, df_interactions]:
         df = df.merge(other, how="left", on="client_code")
 
-    #3_Data cleaning
+    #4_Data cleaning in secondary files
 
     #for the columns from reclamations, NaN is 0 since it compting values columns only, except recla_canal and recla_date_reception
     for column in df.columns:
         if column.startswith("recla") & (column not in ["recla_canal_entrant_principale","recla_canal_entrant_secondaire","recla_date_reception"]) :
             df[column]=df[column].fillna(0)
-    
-    #Création des colonnes booleans (sur courtier_changement, client_changement et client_sexe)
-    #Faire ça sur consommations, interactions, impayés
+
+    #for the columns from consommations, same
+    columns_conso=[c for c in df_consommations.columns if c.startswith(("frais", "remb", "nb_decomptes"))]
+    df[column_conso]=df[column_conso].fillna(0)
+
+    #for the columns from interactions, same
 
     return df
