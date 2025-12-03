@@ -563,7 +563,8 @@ def create_clean_aggregated_dataset(df_portefeuille, df_consommations, df_reclam
             df[column]=df[column].fillna(0)
 
     #for the columns from consommations, same
-    columns_conso=[c for c in df_consommations.columns if c.startswith(("frais", "remb", "nb_decomptes"))]
+    column_conso = [c for c in df.columns 
+                if c.startswith(("frais", "remb", "nb_decomptes"))]
     df[column_conso]=df[column_conso].fillna(0)
 
     #for the columns from interactions, same
@@ -575,3 +576,85 @@ def create_clean_aggregated_dataset(df_portefeuille, df_consommations, df_reclam
     df[column_impaye]=df[column_impaye].fillna(0)
 
     return df
+
+def aggregate_courtier(df_portefeuille):
+    """  This function merges, aggregates and prepares broker-level data by courtier_code_partenaire
+        for future analysis and modelling. 
+        Takes the dataframe portefeuille as input and returns
+         the aggregated broker relative DataFrame
+
+        One important step consists in transforming the percentage of cancellations
+        ("resiliation_pct") into a numerical categorical variable ("resiliation_cat").
+        To do this, the function defines four cancellation–intensity bands (bins) and
+        assigns each of them a numerical code:
+
+            - 0% to 25%   → category 1 (low cancellation rate)
+            - 25% to 50%  → category 2 (medium cancellation rate)
+            - 50% to 80%  → category 3 (high cancellation rate)
+            - 80% to 100% → category 4 (very high cancellation rate)
+        """
+
+    #Compute the internal resiliation rate per broker
+    dict_client_courtier= df_portefeuille["courtier_code_partenaire"].value_counts().to_dict()
+
+    dict_resiliation_courtier=df.groupby("courtier_code_partenaire").agg({"target_resiliation_6mois": "sum"}).to_dict()["target_resiliation_6mois"]
+    dict_pourc_resiliation_courtier= dict()
+    for courtier in dict_client_courtier.keys():
+        dict_pourc_resiliation_courtier[courtier]= dict_resiliation_courtier[courtier]/dict_client_courtier[courtier]*100
+    df_resiliation = pd.DataFrame(list(dict_pourc_resiliation_courtier.items()), columns=["courtier_code_partenaire", "resiliation_pct"])
+    # Merge des données réelles
+    df_courtier = df_resiliation.merge(df, on="courtier_code_partenaire", how="left")
+
+    # Définition des bins et valeurs numériques
+    bins = [0, 25, 50, 80, 100]
+    labels_num = [1, 2, 3, 4]
+
+    df_courtier["courtier_resiliation_cat"] = pd.cut(
+        df_courtier["resiliation_pct"],
+        bins=bins,
+        labels=labels_num,
+        include_lowest=True
+    ).astype(int)
+
+    # Nombre total de clients par courtier
+    df_courtier["courtier_nbre_client"] = df_courtier.groupby("courtier_code_partenaire")["client_code"].transform("count")
+
+    # Colonnes à sommer
+    colonnes_sum = [
+        "courtier_est_escompte",
+        "courtier_nb_affaires_n_moins1",
+        "courtier_nb_radiations_n_moins1",
+        "courtier_nb_affaires_n_moins2",
+        "courtier_nb_radiations_n_moins2"
+    ]
+
+    # Colonnes uniques
+    colonnes_unique = [
+        "courtier_reseau_courtage",
+        "courtier_segmentation_interne",
+        "courtier_type_commission",
+        "courtier_anciennete_annees"
+    ]
+
+    # Agrégation principale
+    df_agg = df_courtier.groupby("courtier_code_partenaire").agg(
+        courtier_resiliation_cat=("courtier_resiliation_cat", "first"),
+        courtier_nbre_client=("courtier_nbre_client", "first"),
+        courtier_anciennete_annees=("courtier_anciennete_annees", "first"),
+        courtier_segmentation_interne=("courtier_segmentation_interne", "first")
+    ).reset_index()
+
+    # Agrégation secondaire : somme
+    df_agg_sum = df_courtier.groupby("courtier_code_partenaire")[colonnes_sum].sum().reset_index()
+
+    # Agrégation secondaire : valeurs uniques
+    df_agg_unique = df_courtier.groupby("courtier_code_partenaire")[colonnes_unique].first().reset_index()
+
+    # Assemblage final
+    df_agg = (
+        df_agg
+        .merge(df_agg_sum, on="courtier_code_partenaire", how="left")
+        .merge(df_agg_unique, on="courtier_code_partenaire", how="left")
+    )
+
+    return df_agg

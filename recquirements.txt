@@ -6,6 +6,7 @@ tqdm
 scikit-learn
 s3fs 
 scipy
+shap 
 
 torch
 torchvision
@@ -27,3 +28,4 @@ wordcloud
 python-dateutil
 ipykernel
 fsspec
+imblearn
