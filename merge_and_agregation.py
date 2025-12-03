@@ -459,7 +459,7 @@ def aggregate_impayes(df_impayes):
     df_types = df_types.rename(columns=mapping_actions)
 
     # Si d'autres types existent → renommer proprement
-    df_types = df_types.rename(columns=lambda x: "nb_" + x.lower()
+    df_types = df_types.rename(columns=lambda x: x.lower()
                                                  .replace(" ", "_")
                                                  .replace("é", "e")
                                                  .replace("è", "e")
@@ -567,5 +567,11 @@ def create_clean_aggregated_dataset(df_portefeuille, df_consommations, df_reclam
     df[column_conso]=df[column_conso].fillna(0)
 
     #for the columns from interactions, same
+    column_inter=[c for c in df.columns if c.startswith("interaction") and c not in ["interaction_historique_mail"]]
+    df[column_inter]=df[column_inter].fillna(0)
+
+    #for the columns from impayés, same
+    column_impaye=[c for c in df.columns if c.startswith("impaye")]
+    df[column_impaye]=df[column_impaye].fillna(0)
 
     return df
