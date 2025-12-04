@@ -271,4 +271,70 @@ def code_insee_from_communes_as_dict(code_postal: str):
         code_insee = ''
         return code_postal, code_insee
 
+
+# Function : Build age pyramid
+def plot_pyramide_ages(df, col_age="âge", col_sexe="sexe",
+                       bins=range(0, 111, 5),
+                       labels=None,
+                       title="Pyramide des âges"):
+    """
+    Trace une pyramide des âges esthétique à partir d'un DataFrame.
+
+    df : DataFrame avec colonnes âge et sexe
+    col_age : nom de la colonne contenant l'âge
+    col_sexe : nom de la colonne contenant le sexe
+    bins : classes d'âge
+    labels : étiquettes des classes d'âge (si None → auto)
+    title : titre du graphique
+    """
     
+    # −−− Préparation des classes d’âge −−−
+    if labels is None:
+        labels = [f"{bins[i]}-{bins[i+1]-1}" for i in range(len(bins)-1)]
+
+    df = df.copy()
+    df["classe_age"] = pd.cut(df[col_age], bins=bins, labels=labels, right=False)
+
+    # −−− Tableau des effectifs −−−
+    pivot = df.pivot_table(index="classe_age", columns=col_sexe,
+                           aggfunc="size", fill_value=0)
+
+    # Réordonner des plus jeunes en bas (pyramide classique)
+    pivot = pivot.iloc[::1]
+
+    # Séparer hommes / femmes
+    sexes = pivot.columns
+    if len(sexes) != 2:
+        raise ValueError("La colonne sexe doit contenir exactement deux catégories.")
+
+    s1, s2 = sexes
+
+    # Hommes à gauche : effectifs négatifs
+    hommes = -pivot[s1]
+    femmes = pivot[s2]
+
+    # −−− Plot −−−
+    plt.figure(figsize=(10, 8))
+    sns.set_style("whitegrid")
+
+    plt.barh(pivot.index, hommes, color="#1f4e79", label=s1)
+    plt.barh(pivot.index, femmes, color="#c00000", label=s2)
+
+    # Ligne verticale au centre
+    plt.axvline(0, color="black", linewidth=1)
+
+    # Esthétique des axes
+    plt.xlabel("Effectifs")
+    plt.title(title, fontsize=18, weight="bold", pad=15)
+
+    # Valeurs symétriques sur l’axe x
+    max_val = max(femmes.max(), abs(hommes.min()))
+    plt.xlim(-max_val * 1.1, max_val * 1.1)
+
+    # Ticks centrés positifs
+    xticks = np.linspace(-max_val, max_val, 9)
+    plt.xticks(xticks, [abs(int(x)) for x in xticks])
+
+    plt.legend(loc="upper right")
+    plt.tight_layout()
+    plt.show()

@@ -45,3 +45,4 @@ def cramers_v(x, y):
   n = table.sum().sum()
   r, k = table.shape
   return np.sqrt(chi2 / (n * (min(r - 1, k - 1))))
+
