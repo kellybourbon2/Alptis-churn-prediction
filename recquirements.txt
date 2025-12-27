@@ -1,5 +1,6 @@
 numpy
 pandas
+fsspec 
 matplotlib
 seaborn
 tqdm
@@ -7,6 +8,13 @@ scikit-learn
 s3fs 
 scipy
 shap 
+requests
+
+python-dateutil
+ipykernel
+fsspec
+imblearn
+xgboost
 
 torch
 torchvision
@@ -25,7 +33,3 @@ fr-core-news-md @ https://github.com/explosion/spacy-models/releases/download/fr
 nltk
 wordcloud
 
-python-dateutil
-ipykernel
-fsspec
-imblearn

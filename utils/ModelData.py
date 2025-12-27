@@ -114,3 +114,46 @@ def acm_preprocess_numerical(data: pd.DataFrame, exclude: Union[list, str] = '')
     # Return the new dataframe
     print(f'Liste des colonnes modifiées : {columns_edited}')
     return data_copy
+
+def repartition_commission_by_broker(df_agg):  
+    """
+     Args:
+        df_agg: DataFrame avec les données agrégées par courtier (sortie de aggregate_broker)
+    
+    Returns:
+        DataFrame avec la répartition des types de commission par segment
+    """
+    #correlation btw type of commission and segmentation intern
+    df_repartition = pd.crosstab(
+        df_agg["courtier_segmentation_interne"],
+        df_agg["courtier_type_commission"],
+        margins=True,
+        margins_name="Total"
+    )
+
+    # Calculer les pourcentages par ligne (par segment)
+    df_pct = pd.crosstab(
+        df_agg["courtier_segmentation_interne"],
+        df_agg["courtier_type_commission"],
+        normalize='index'
+    ) * 100
+
+    df_pct = df_pct.round(2)
+
+    # Ajouter un suffixe pour distinguer les pourcentages
+    df_pct.columns = [f"{col}_pct" for col in df_pct.columns]
+
+    # Combiner les counts et les pourcentages
+    df_final = df_repartition.join(df_pct)
+
+    # Réorganiser les colonnes pour alterner count et pct
+    cols_ordered = []
+    for col in df_repartition.columns:
+        if col != "Total":
+            cols_ordered.append(col)
+            if f"{col}_pct" in df_final.columns:
+                cols_ordered.append(f"{col}_pct")
+    if "Total" in df_repartition.columns:
+        cols_ordered.append("Total")
+
+    return df_final[df_pct.columns]

@@ -596,17 +596,17 @@ def aggregate_courtier(df_portefeuille):
 
     #Compute the internal resiliation rate per broker
     dict_client_courtier= df_portefeuille["courtier_code_partenaire"].value_counts().to_dict()
-
-    dict_resiliation_courtier=df.groupby("courtier_code_partenaire").agg({"target_resiliation_6mois": "sum"}).to_dict()["target_resiliation_6mois"]
+    dict_resiliation_courtier=df_portefeuille.groupby("courtier_code_partenaire").agg({"target_resiliation_6mois": "sum"}).to_dict()["target_resiliation_6mois"]
     dict_pourc_resiliation_courtier= dict()
     for courtier in dict_client_courtier.keys():
-        dict_pourc_resiliation_courtier[courtier]= dict_resiliation_courtier[courtier]/dict_client_courtier[courtier]*100
+        dict_pourc_resiliation_courtier[courtier]= round(dict_resiliation_courtier[courtier]/dict_client_courtier[courtier]*100,2)
     df_resiliation = pd.DataFrame(list(dict_pourc_resiliation_courtier.items()), columns=["courtier_code_partenaire", "resiliation_pct"])
-    # Merge des données réelles
-    df_courtier = df_resiliation.merge(df, on="courtier_code_partenaire", how="left")
+   
+    # Left merge the resiliation rate column with the rest of the portefeuille Df
+    df_courtier = df_resiliation.merge(df_portefeuille, on="courtier_code_partenaire", how="left")
 
     # Définition des bins et valeurs numériques
-    bins = [0, 25, 50, 80, 100]
+    bins = [0, 7, 15, 50, 100]
     labels_num = [1, 2, 3, 4]
 
     df_courtier["courtier_resiliation_cat"] = pd.cut(
@@ -639,6 +639,7 @@ def aggregate_courtier(df_portefeuille):
     # Agrégation principale
     df_agg = df_courtier.groupby("courtier_code_partenaire").agg(
         courtier_resiliation_cat=("courtier_resiliation_cat", "first"),
+        courtier_resiliation_pct= ("resiliation_pct", "first"),
         courtier_nbre_client=("courtier_nbre_client", "first"),
         courtier_anciennete_annees=("courtier_anciennete_annees", "first"),
         courtier_segmentation_interne=("courtier_segmentation_interne", "first")
@@ -657,4 +658,140 @@ def aggregate_courtier(df_portefeuille):
         .merge(df_agg_unique, on="courtier_code_partenaire", how="left")
     )
 
+    #Drop duplicates
+    df_agg=df_agg.drop(columns= ["courtier_segmentation_interne_y", "courtier_anciennete_annees_y"])
+    df_agg=df_agg.rename(columns={"courtier_segmentation_interne_x":"courtier_segmentation_interne","courtier_anciennete_annees_x":"courtier_anciennete_annees"})
+
+    #create hot encoder for categorical columns
+    #df_agg=pd.get_dummies(df_agg, columns=["courtier_reseau_courtage","courtier_segmentation_interne", "courtier_type_commission"],dtype='int')
+
     return df_agg
+
+def aggregate_by_commission_type(df_agg):
+    """
+    Cette fonction agrège les données au niveau du type de commission.
+    Chaque ligne représente un type de commission unique avec des statistiques agrégées.
+    
+    Args:
+        df_agg: DataFrame avec les données agrégées par courtier (sortie de aggregate_courtier)
+    
+    Returns:
+        DataFrame agrégé par courtier_type_commission
+    """
+    
+    # Colonnes à sommer
+    colonnes_sum = [
+        "courtier_nbre_client",
+        "courtier_est_escompte",
+        "courtier_nb_affaires_n_moins1",
+        "courtier_nb_radiations_n_moins1",
+        "courtier_nb_affaires_n_moins2",
+        "courtier_nb_radiations_n_moins2"
+    ]
+    
+    # Agrégation par type de commission
+    df_commission = df_agg.groupby("courtier_type_commission").agg(
+        # Nombre de courtiers par type de commission
+        nbre_courtiers=("courtier_code_partenaire", "count"),
+        
+        # Somme des colonnes numériques
+        total_clients=("courtier_nbre_client", "sum"),
+        total_escompte=("courtier_est_escompte", "sum"),
+        total_affaires_n_moins1=("courtier_nb_affaires_n_moins1", "sum"),
+        total_radiations_n_moins1=("courtier_nb_radiations_n_moins1", "sum"),
+        total_affaires_n_moins2=("courtier_nb_affaires_n_moins2", "sum"),
+        total_radiations_n_moins2=("courtier_nb_radiations_n_moins2", "sum"),
+        
+        # Moyennes
+        moy_clients_par_courtier=("courtier_nbre_client", "mean"),
+        moy_resiliation_pct=("courtier_resiliation_pct", "mean"),
+        moy_anciennete_annees=("courtier_anciennete_annees", "mean"),
+        
+        # Médianes
+        median_clients=("courtier_nbre_client", "median"),
+        median_resiliation_pct=("courtier_resiliation_pct", "median"),
+        
+        # Min/Max
+        min_resiliation_pct=("courtier_resiliation_pct", "min"),
+        max_resiliation_pct=("courtier_resiliation_pct", "max"),
+        
+        # Distribution des catégories de résiliation
+        nbre_cat_1=("courtier_resiliation_cat", lambda x: (x == 1).sum()),
+        nbre_cat_2=("courtier_resiliation_cat", lambda x: (x == 2).sum()),
+        nbre_cat_3=("courtier_resiliation_cat", lambda x: (x == 3).sum()),
+        nbre_cat_4=("courtier_resiliation_cat", lambda x: (x == 4).sum())
+    ).reset_index()
+    
+    # Calcul de pourcentages supplémentaires
+    df_commission["pct_cat_1"] = round(df_commission["nbre_cat_1"] / df_commission["nbre_courtiers"] * 100, 2)
+    df_commission["pct_cat_2"] = round(df_commission["nbre_cat_2"] / df_commission["nbre_courtiers"] * 100, 2)
+    df_commission["pct_cat_3"] = round(df_commission["nbre_cat_3"] / df_commission["nbre_courtiers"] * 100, 2)
+    df_commission["pct_cat_4"] = round(df_commission["nbre_cat_4"] / df_commission["nbre_courtiers"] * 100, 2)
+    
+    # Arrondir les moyennes
+    df_commission["moy_clients_par_courtier"] = df_commission["moy_clients_par_courtier"].round(2)
+    df_commission["moy_resiliation_pct"] = df_commission["moy_resiliation_pct"].round(2)
+    df_commission["moy_anciennete_annees"] = df_commission["moy_anciennete_annees"].round(2)
+    df_commission["median_resiliation_pct"] = df_commission["median_resiliation_pct"].round(2)
+
+    #new column (pct_escompte)
+    df_commission["pct_escompte"]=df_commission["total_escompte"]/df_commission["total_clients"]*100
+
+    return df_commission
+
+def aggregate_by_segmentation(df_agg):
+    """
+    Cette fonction agrège les données au niveau de la segmentation interne.
+    Chaque ligne représente un segment interne unique avec des statistiques agrégées.
+    
+    Args:
+        df_agg: DataFrame avec les données agrégées par courtier (sortie de aggregate_broker)
+    
+    Returns:
+        DataFrame agrégé par courtier_segmentation_interne
+    """
+    
+    # Agrégation par segmentation interne
+    df_segment = df_agg.groupby("courtier_segmentation_interne").agg(
+        # Nombre de courtiers par segment
+        nbre_courtiers=("courtier_code_partenaire", "count"),
+        
+        # Somme des colonnes numériques
+        total_clients=("courtier_nbre_client", "sum"),
+        total_escompte=("courtier_est_escompte", "sum"),
+        total_affaires_n_moins1=("courtier_nb_affaires_n_moins1", "sum"),
+        total_radiations_n_moins1=("courtier_nb_radiations_n_moins1", "sum"),
+        total_affaires_n_moins2=("courtier_nb_affaires_n_moins2", "sum"),
+        total_radiations_n_moins2=("courtier_nb_radiations_n_moins2", "sum"),
+        
+        # Moyennes
+        moy_clients_par_courtier=("courtier_nbre_client", "mean"),
+        moy_resiliation_pct=("courtier_resiliation_pct", "mean"),
+        moy_anciennete_annees=("courtier_anciennete_annees", "mean"),
+        
+        # Médianes
+        median_clients=("courtier_nbre_client", "median"),
+        median_resiliation_pct=("courtier_resiliation_pct", "median"),
+        
+        # Min/Max
+        min_resiliation_pct=("courtier_resiliation_pct", "min"),
+        max_resiliation_pct=("courtier_resiliation_pct", "max"),
+
+        nbre_cat_1=("courtier_resiliation_cat", lambda x: (x == 1).sum()),
+        nbre_cat_2=("courtier_resiliation_cat", lambda x: (x == 2).sum()),
+        nbre_cat_3=("courtier_resiliation_cat", lambda x: (x == 3).sum()),
+        nbre_cat_4=("courtier_resiliation_cat", lambda x: (x == 4).sum())
+    ).reset_index()
+        
+    
+    
+    # Arrondir les moyennes
+    df_segment["moy_clients_par_courtier"] = df_segment["moy_clients_par_courtier"].round(2)
+    df_segment["moy_resiliation_pct"] = df_segment["moy_resiliation_pct"].round(2)
+    df_segment["moy_anciennete_annees"] = df_segment["moy_anciennete_annees"].round(2)
+    df_segment["median_resiliation_pct"] = df_segment["median_resiliation_pct"].round(2)
+
+    #Column on pct_escompte
+    df_segment["pct_escompte"] = round(df_segment["total_escompte"] / df_segment["total_clients"] * 100, 2)
+    
+    return df_segment
