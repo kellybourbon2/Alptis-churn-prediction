@@ -5,6 +5,7 @@
 import pandas as pd
 from utils.TransformData import make_binary_numeric
 
+
 def aggregate_reclamations(df_reclamations):
     """
     Agrège les réclamations par client_code avec création d’indicateurs
@@ -33,12 +34,12 @@ def aggregate_reclamations(df_reclamations):
     # ============================================================
 
     #One hot encoding of motif columns, and creation of recla_motif_Autre for non top5 motif
-    df_reclamations=pd.get_dummies(df_reclamations, columns=["recla_motif"], dtype=int) 
+    df_reclamations = pd.get_dummies(df_reclamations, columns=["recla_motif"], dtype=int) 
     colonnes_motif = [c for c in df_reclamations.columns if (c.startswith("recla_motif_")) & (c not in ["recla_motif_acpr","recla_motif_sensibilite"])]
     top5 = df_reclamations[colonnes_motif].sum().sort_values(ascending=False).head(5).index.tolist()
     autres = list(set(colonnes_motif) - set(top5))
     df_reclamations["recla_motif_Autre"] = df_reclamations[autres].sum(axis=1)
-    colonnes_motif =  top5 + ["recla_motif_Autre","client_code"]
+    colonnes_motif = top5 + ["recla_motif_Autre","client_code"]
     df_motifs = df_reclamations.groupby("client_code")[top5 + ["recla_motif_Autre"]].sum().reset_index()
 
     # Canal principal (mode)
@@ -518,6 +519,9 @@ def portefeuille_cleaning(df_portefeuille):
     df_portefeuille_cleaned["courtier_type_commission"] = df_portefeuille_cleaned["courtier_type_commission"].fillna(
         df_portefeuille_cleaned["courtier_code_apporteur"].map(mode_par_courtier)
     )
+
+    #4 - encoding of important variables in portefeuille
+    df_portefeuille_cleaned = pd.get_dummies(data=df_portefeuille_cleaned, columns= ["client_structure_familiale","courtier_segmentation_interne", "courtier_type_commission", "client_ro_souscripteur","courtier_reseau_courtage"])
 
     return df_portefeuille_cleaned
 
