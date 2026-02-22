@@ -1,4 +1,12 @@
+#csv files
 *.csv
-Course3_Machine_Learning_Hi6.ipynb
-__pycache__/
+
+#virtual environnements
 alptis_kb_env/
+.venv
+
+#cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
