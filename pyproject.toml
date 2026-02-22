@@ -1,0 +1,27 @@
+[project]
+name = "business data challenge - alptis g2"
+version = "0.1.0"
+description = "Predicting cancellation among Alptis' clients during the next six months, part of ENSAE Business Data Challenge"
+authors = [
+    {name = "kelly bourbon",email = "kelly.bourbon@ensae.fr"}
+    {name = "habibdaniel karamoko",email = "habibdaniel.karamoko@ensae.fr"}
+    {name = "dominique noutsougan",email = "dominique.noutsougan@ensae.fr"}
+    {name = "oumalheir souleynalado",email = "oumalheir.souleynalado@ensae.fr"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "torch (>=2.10.0,<3.0.0)"
+]
+
+[dependency-groups]
+dev = [
+    "pandas (>=3.0.1,<4.0.0)",
+    "numpy (>=2.4.2,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
