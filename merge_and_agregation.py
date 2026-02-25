@@ -496,7 +496,7 @@ def portefeuille_cleaning(df_portefeuille):
     df_portefeuille_cleaned = df_portefeuille.copy()
 
     # 1 - Creating boolean columns
-    df_portefeuille_cleaned["client_male_souscripteur"] = make_binary_numeric(df_portefeuille_cleaned["client_sexe_souscripteur"])
+    df_portefeuille_cleaned["client_male_souscripteur"] = (df_portefeuille_cleaned["client_sexe_souscripteur"]=="Male").astype(int)
     df_portefeuille_cleaned["client_demenagement_dans_les_12_mois"] = df_portefeuille_cleaned["client_departement_avant_changement_12_mois"].notna().astype(int)
     df_portefeuille_cleaned["courtier_changement_dans_les_12_mois"] = df_portefeuille_cleaned["courtier_code_avant_changement_12_mois"].notna().astype(int)
 
