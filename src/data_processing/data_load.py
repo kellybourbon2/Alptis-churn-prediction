@@ -16,7 +16,7 @@ def _load_from_local(set: str, files: dict) -> dict:
     for key, filename in files.items():
         filepath = os.path.join(Config.DATA_RAW_DIR, set, filename)
         try:
-            data_frames[key] = pd.read_csv(filepath, sep=";")
+            data_frames[key] = pd.read_csv(filepath, sep=";", index_col=False)
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found: {filepath}")
     return data_frames
@@ -41,7 +41,7 @@ def _load_from_s3(set: str, files: dict) -> dict:
         s3_path = f"{Config.S3_BUCKET}/alptis/{set}/{filename}"
         try:
             with fs.open(s3_path, 'rb') as f:
-                data_frames[key] = pd.read_csv(f, sep=";")
+                data_frames[key] = pd.read_csv(f, sep=";", index_col=False)
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found on S3: {s3_path}")
     return data_frames
@@ -55,7 +55,7 @@ def data_loading(set: Literal["training", "validation", "evaluation"]) -> tuple[
     
     Returns: 
         a tuple of pandas DataFrames in this order:
-        (consommations, impayes, interactions, portefeuille, reclamations)
+        (portefeuille, consommations, reclamations, interactions, impayes)
     """
     # Validate set parameter
     if set not in Config.DATASET_MAPPING:
@@ -70,11 +70,11 @@ def data_loading(set: Literal["training", "validation", "evaluation"]) -> tuple[
     else:
         data_frames = _load_from_local(set, files)
     
-    # Return in consistent order: (consommations, impayes, interactions, portefeuille, reclamations)
+    # Return in consistent order: 
+    # (portefeuille, consommations, reclamations, interactions, impayes)
     return (
+        data_frames["portefeuille"], 
         data_frames["consommations"],
-        data_frames["impayes"],
-        data_frames["interactions"],
-        data_frames["portefeuille"],
         data_frames["reclamations"],
-    )
+        data_frames["interactions"], 
+        data_frames["impayes"])
