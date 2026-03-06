@@ -11,7 +11,7 @@ source ./venv/bin/activate
 ```
 ## Data Loading
 
-Two loading modes are available depending on your environment.
+Two loading modes are available depending on the variable `LOAD_FROM_S3` in `Config`
 
 ### Local Loading
 
@@ -27,7 +27,7 @@ data/
     └── *.csv
 ```
 
-### SSPCloud Loading
+### SSPCloud Loading (S3 Loading)
 
 Data is loaded directly from the shared MinIO bucket on SSPCloud.
 
