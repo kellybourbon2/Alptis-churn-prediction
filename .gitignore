@@ -4,6 +4,10 @@
 alptis_kb_env/
 .venv
 
+#secrets
+*.env
+.env
+
 #cache
 __pycache__/
 *.py[cod]
