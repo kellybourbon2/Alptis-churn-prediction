@@ -41,3 +41,5 @@ AWS_BUCKET_NAME='projet-bdc-data'
 ```
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
 
+#### Demo (only for dev - to delete later)
+Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) : you can either merge with the function of src.data_processing or load the already merged dataset in SPPCloud, stored in bucket "projet-bdc-alptis-g2"
