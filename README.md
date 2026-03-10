@@ -40,3 +40,12 @@ AWS_S3_ENDPOINT=...
 AWS_BUCKET_NAME=...
 ```
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
+
+## Data Preprocessing
+
+Located in `src/data_processing/`, the preprocessing module handles data cleaning and preparation:
+
+- **`pipeline_processing.py`**: Orchestrates the complete preprocessing pipeline, coordinating cleaning and aggregation steps to produce a merged, client-level dataset
+- **`cleaning.py`**: Cleans the portfolio data through feature engineering, missing value imputation, and categorical encoding
+- **`aggregation.py`**: Aggregates secondary files (reclamations, consumptions, interactions, overdue payments) at the client level
+- **`data_load.py`**: Handles data loading from either local storage or S3 based on configuration
