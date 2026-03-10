@@ -7,7 +7,7 @@ Clone the repo and follow the following steps:
 ## Environement creation and activation
 ```bash
 uv sync
-source ./venv/bin/activate
+source .venv/bin/activate
 ```
 ## Data Loading
 
@@ -31,12 +31,13 @@ data/
 
 Data is loaded directly from the shared MinIO bucket on SSPCloud.
 
-Create a `.env` file at the root of the project with the following variables:
+Create a `.env` file at the root of the project with the following:
 ```ini
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_SESSION_TOKEN=...
 AWS_S3_ENDPOINT=...
+AWS_DEFAULT_REGION=...
 AWS_BUCKET_NAME='projet-bdc-data'
 ```
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
