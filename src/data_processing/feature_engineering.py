@@ -1,4 +1,5 @@
-"""File where the features engineering is conducted"""
+"""File where the features engineering on the variables from
+'portefeuille' file is conducted"""
 
 import pandas as pd
 import numpy as np
@@ -13,10 +14,15 @@ from Config import (
     ANCIENNETE_COURTIER_COLUMN,
     ANCIENNETE_BINS,
     ANCIENNETE_LABELS,
+    TIMESTAMP_COLUMNS_DAYS, 
+    TIMESTAMP_COLUMNS_MONTHS
 )
 
 def feature_engineering(
     df: pd.DataFrame,
+    ref_date: pd.Timestamp, 
+    date_days_columns= TIMESTAMP_COLUMNS_DAYS,
+    date_months_columns=  TIMESTAMP_COLUMNS_MONTHS,
     age_column=AGE_COLUMN,
     anciennete_courtier_column=ANCIENNETE_COURTIER_COLUMN,
     age_labels=AGE_LABELS,
@@ -31,12 +37,35 @@ def feature_engineering(
     Returns:
       DataFrame: merged dataframe with new features created
     """
-    # Creation of a categorical variables and one-hot encoding
+    #---- variables from portefeuille ------------
+
+    # Creation of a categorical variables 
     df["age_categories"] = pd.cut(df[age_column], bins=age_bins, labels=age_labels)
-    df["age_categories"] = df["age_categories"].map({label: i for i, label in enumerate(age_labels)}) #one-hot encoding
-
     df["courtier_anciennete_categories"] = pd.cut(df[anciennete_courtier_column], bins= anciennete_bins, labels=anciennete_labels)
-    df["courtier_anciennete_categories"] = df["courtier_anciennete_categories"].map({label: i for i, label in enumerate(anciennete_labels)}) #one-hot-encoding
 
+    #-------variable from consommations---------
+
+    #Create "dernier_paiement_consommation": latest date de consommation enregistrée dans le fichier consommation
+    df["dernier_paiement_consommation"] = df["annee_mois_paiement"].apply(
+        lambda dates: max(pd.to_datetime(dates, format="%Y-%m")) if isinstance(dates, list) else pd.NaT)
+    df.drop(columns=["annee_mois_paiement"], inplace=True) #drop old columns
+
+    #Creation of variables on TimeStamp columns: count the days between ref_date and the time
+    for col in date_days_columns:
+        df[f"{col}_jours"] = (
+            ref_date - pd.to_datetime(df[col], format='%Y-%m-%d')
+        ).dt.days
+        df.fillna({f"{col}_jours": -1}, inplace=True) #fill missing values with '-1': indicates that no nps were left
+        df.drop(columns=col, inplace=True) #drop old columns
+
+    #Creation of variables on TimeStamp columns: count the months between ref_date and the time
+    for col in date_months_columns:
+        df[f"{col}_mois"] = (
+            (ref_date.year - pd.to_datetime(df[col], format='%Y-%m-%d').dt.year) * 12 +
+            (ref_date.month - pd.to_datetime(df[col], format='%Y-%m-%d').dt.month))
+        df.fillna({f"{col}_mois": -1}, inplace=True) #fill missing values with '-1': indicates that no paiement occured
+        df.drop(columns=col, inplace=True) #drop old columns
+        
     return df
 
+    

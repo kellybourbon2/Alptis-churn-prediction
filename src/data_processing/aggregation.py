@@ -1,10 +1,11 @@
-"""Aggregate secondary files (consommations, reclamations, impayes, interactions) by client_code"""
+"""Aggregate secondary files (consommations, reclamations, impayes, interactions)
+ by client_code, this file include some features engineering"""
 
 import pandas as pd
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[2])) #So config is added to root
+sys.path.append(str(Path(__file__).resolve().parents[2])) #config is added to root
 
 from Config import RECLA_DELAIS_COURT, RECLA_DELAIS_LONG
 

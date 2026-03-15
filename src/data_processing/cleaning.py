@@ -35,4 +35,22 @@ def portefeuille_cleaning(df_portefeuille):
     df_portefeuille_cleaned["courtier_type_commission"] = df_portefeuille_cleaned["courtier_type_commission"].fillna(
         df_portefeuille_cleaned["courtier_code_apporteur"].map(mode_par_courtier)
     )
+
+    #4- Imputing NaN in nps score missing with median score
+    nps_cols = ["client_nps_note_reco_n", "client_nps_note_reco_n_moins1"]
+    df_portefeuille_cleaned.fillna(
+        {col: df_portefeuille_cleaned[col].median() for col in nps_cols}, 
+        inplace=True
+    )
+
+    #5- Fill cotisation columns with 0 when NaN
+    cotisation_cols = [c for c in df_portefeuille_cleaned.columns if c.startswith(("client_cotisation"))]
+    df_portefeuille_cleaned.fillna({col: 0 for col in cotisation_cols}, inplace=True)
     return df_portefeuille_cleaned
+
+if __name__== "__main__":
+    from data_load import data_loading
+    df_portefeuille, _, _, _, _= data_loading("training")
+    df_portefeuille_cleaned = portefeuille_cleaning(df_portefeuille)
+    print(df_portefeuille_cleaned["client_cotisations_annualisees_n_moins2"])
+
