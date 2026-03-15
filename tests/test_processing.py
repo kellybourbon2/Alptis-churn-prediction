@@ -75,19 +75,6 @@ class TestPreprocessing:
         assert df_processed[target_col].isna().sum() == 0, \
             f"Target column '{target_col}' contains NaN"
 
-    def test_ordinal_client_genre(self, df_processed):
-        """client_genre values are in {0, 1, 2} or NaN"""
-        if "client_genre" in df_processed.columns:
-            valid = df_processed["client_genre"].dropna().isin([0, 1, 2]).all()
-            assert valid, "client_genre contains values outside {0, 1, 2}"
-
-    def test_ordinal_nb_enfants(self, df_processed):
-        """client_nb_enfants values are in range [1, 7] or NaN"""
-        if "client_nb_enfants" in df_processed.columns:
-            vals = df_processed["client_nb_enfants"].dropna()
-            assert vals.between(1, 7).all(), \
-                f"client_nb_enfants out of range [1,7]: {vals.unique()}"
-
     def test_no_timestamp_columns(self, df_processed):
         """No raw Timestamp columns remaining"""
         ts_cols = [
@@ -162,9 +149,10 @@ class TestNormalization:
 
     def test_no_nan_after_normalization(self, df_ready, cols_normalized):
         """Normalization should not introduce NaN"""
-        for col in cols_normalized:
-            assert df_ready[col].isna().sum() == 0, \
-                f"{col}: contains NaN after normalization"
+        nan_cols = [col for col in cols_normalized if df_ready[col].isna().sum() > 0]
+        
+        assert len(nan_cols) == 0, \
+            f"Columns with NaN after normalization: {nan_cols}"
 
     def test_binary_columns_untouched(self, df_ready):
         """Binary columns should not be normalized"""

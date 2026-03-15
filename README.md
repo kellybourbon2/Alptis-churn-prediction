@@ -52,4 +52,27 @@ Located in `src/data_processing/`, the preprocessing module handles data cleanin
 - **`data_load.py`**: Handles data loading from either local storage or S3 based on configuration
 
 #### Demo (only for dev - to delete later)
-Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) : you can either merge with the function of src.data_processing or load the already merged dataset in SPPCloud, stored in bucket "projet-bdc-alptis-g2"
+Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
+
+# TO DO 
+
+- check les test qui ont fail (pytest tests/test_processing.py): sinon impossible que modèle puisse tourner
+- split test/train dans un .py (selon une variable de config TEST_SAMPLE_SIZE)
+- trainining.py, evaluation.py : py pour définir entrainement et evaluation puis run avec MLFlow
+
+--> **ATTENTION: QUAND CREE FONCTION FIT, VIRER CLIENT_CODE (Variable KEY_COLUMN dans Config)**
+--> SINON RISQUE DOVERFIT SUR CA (On peut pas la drop au moment du data processing sinon perd info quand fait prédiction)
+
+Pour cela: 
+from Config import KEY_COLUMN, TARGET_COLUMN
+X = df.drop(columns=[TARGET_COLUMN, KEY_COLUMN])
+y = df[target_col]
+model.fit(X, y)
+predictions = model.predict(X)
+
+**Quand on a les résultats de prediction(a la fin du training):**
+ Recoller la colonne client_code via index — garanti aligné car même df
+results = pd.DataFrame({
+    "client_code":  df_ready["client_code"],  # depuis le même df
+    "churn_predit": predictions
+})
