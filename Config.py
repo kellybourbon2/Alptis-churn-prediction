@@ -2,6 +2,42 @@
 
 import os
 from dotenv import load_dotenv
+import pandas as pd
+
+#---------------DATA PROCESSING--------------
+
+TARGET_COLUMN='target_resiliation_6mois'
+KEY_COLUMN = "client_code"
+
+REFERENCE_DATES = {
+    "training":  pd.Timestamp("2023-11-30"),
+    "validation": pd.Timestamp("2024-11-30"),  
+    "evaluation":  pd.Timestamp("2024-11-30")
+}
+
+HIGH_CARDINALITY=10
+EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"]
+
+FILES_TO_DROP= "impaye"
+COLUMNS_TO_DROP = ["client_structure_familiale", 'annee_mois_paiement'] 
+#annee mois paiement: liste des mois de paiement, trouver moyen de le process pour modèle
+
+COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail', "client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
+COLUMNS_ORDINAL = ["age_categories", "courtier_anciennete_categories","client_nb_assures", "client"]
+
+#categorical encoding
+ANCIENNETE_COURTIER_COLUMN = 'courtier_anciennete_annees'
+ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40] #cf graph of Overview alptis
+ANCIENNETE_LABELS= ["new", "recent", "stable", "old", "very old"]
+
+AGE_COLUMN= "client_age_souscripteur"
+AGE_BINS = [18, 25, 35, 50, 60, 80, 120]  #based on younger and older person in portefeuille
+AGE_LABELS = ['young', 'adult', 'mature','middle aged', 'senior', 'senior plus'] 
+
+RECLA_DELAIS_COURT = 3 #(<3: court)
+RECLA_DELAIS_LONG= 15 #(>15: long, 3-15: moyen)
+
+#----------ENVIRONNEMENT SETTING--------------------------
 
 # Load environment variables
 load_dotenv(override=True)
