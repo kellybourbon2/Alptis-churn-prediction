@@ -9,7 +9,11 @@ sys.path.append(str(Path(__file__).resolve().parents[2])) #So config is added to
 from Config import RECLA_DELAIS_COURT, RECLA_DELAIS_LONG
 
 def aggregate_reclamations(df_reclamations, ref_date):
-    """Aggregate reclamations by client: count, motifs, channels, sensitivity, initiator, delays"""
+    """Aggregate reclamations by client: count, motifs, channels, sensitivity, initiator, delays:
+        Args: 
+            ref_date: the reference date in order 
+              to be able to count the days waited since latest reclamation
+    """
 
     df_agg = df_reclamations.groupby("client_code").agg(recla_nombre=("client_code", "count")).reset_index()
 
