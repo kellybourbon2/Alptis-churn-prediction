@@ -1,10 +1,16 @@
 """Aggregate secondary files (consommations, reclamations, impayes, interactions) by client_code"""
 
 import pandas as pd
+import sys
+from pathlib import Path
 
-def aggregate_reclamations(df_reclamations):
+sys.path.append(str(Path(__file__).resolve().parents[2])) #So config is added to root
+
+from Config import RECLA_DELAIS_COURT, RECLA_DELAIS_LONG
+
+def aggregate_reclamations(df_reclamations, ref_date):
     """Aggregate reclamations by client: count, motifs, channels, sensitivity, initiator, delays"""
-    
+
     df_agg = df_reclamations.groupby("client_code").agg(recla_nombre=("client_code", "count")).reset_index()
 
     # Top 5 motifs
@@ -54,29 +60,38 @@ def aggregate_reclamations(df_reclamations):
     df_reclamations["recla_non_cloturee"] = ((df_reclamations["recla_reponse_gestion"] == "Non") | (df_reclamations["recla_solution_trouvee"] == "Négative")).astype(int)
     df_agg = df_agg.merge(df_reclamations.groupby("client_code")["recla_non_cloturee"].sum().reset_index(), on="client_code", how="left")
 
-    # Reception dates list
-    df_agg = df_agg.merge(
-        df_reclamations.groupby("client_code")["recla_date_reception"].agg(list).reset_index(),
-        on="client_code", how="left"
-    )
-
-    # Delay categories
+    # Delay categories (feature engineering)
     df_reclamations["recla_date_cloture"] = pd.to_datetime(df_reclamations["recla_date_cloture"])
     df_reclamations["recla_date_reception"] = pd.to_datetime(df_reclamations["recla_date_reception"])
     df_reclamations["recla_delais_jours"] = (df_reclamations["recla_date_cloture"] - df_reclamations["recla_date_reception"]).dt.days
 
-    df_reclamations["recla_delais_court"] = (df_reclamations["recla_delais_jours"] <= 3).astype(int)
-    df_reclamations["recla_delais_moyen"] = ((df_reclamations["recla_delais_jours"] > 3) & (df_reclamations["recla_delais_jours"] <= 15)).astype(int)
-    df_reclamations["recla_delais_long"] = (df_reclamations["recla_delais_jours"] > 15).astype(int)
+    df_reclamations["recla_delais_court"] = (df_reclamations["recla_delais_jours"] <= RECLA_DELAIS_COURT).astype(int)
+    df_reclamations["recla_delais_moyen"] = ((df_reclamations["recla_delais_jours"] > RECLA_DELAIS_COURT) & (df_reclamations["recla_delais_jours"] <= RECLA_DELAIS_LONG)).astype(int)
+    df_reclamations["recla_delais_long"] = (df_reclamations["recla_delais_jours"] > RECLA_DELAIS_LONG).astype(int)
 
     df_delais = df_reclamations.groupby("client_code")[["recla_delais_court", "recla_delais_moyen", "recla_delais_long"]].sum().reset_index()
     df_agg = df_agg.merge(df_delais, on="client_code", how="left")
+
+    # Creation of 'recla_latest_jour': durée depuis la dernière reception et la date de prédiction des résiliations
+    df_last = (
+        df_reclamations.groupby("client_code")["recla_date_reception"]
+        .max()
+        .reset_index()
+        .rename(columns={"recla_date_reception": "recla_latest_jours"})
+    )
+    df_last["recla_latest_jours"] = (
+        ref_date - df_last["recla_latest_jours"]
+    ).dt.days
+
+    df_agg = df_agg.merge(df_last, on="client_code", how="left")
+    df_agg = df_agg.drop(columns=["recla_date_reception"], errors="ignore")
 
     return df_agg
 
 
 def aggregate_consommations(df_consommations):
-    """Aggregate consumption by client with nested dict structure by date and care type"""
+    """Aggregate consumption by client, by summing all the amounts for one client
+       (sum on reste_à_charge, frais_réel, nb_décompte, ...)"""
     
     df = df_consommations.copy()
     df["annee_mois_paiement"] = df["annee_mois_paiement"].astype("string").str.strip()
@@ -87,36 +102,7 @@ def aggregate_consommations(df_consommations):
         {**{col: "sum" for col in cols_num}, "annee_mois_paiement": lambda x: sorted(x.dropna().unique().tolist())}
     ).reset_index()
 
-    soins = ["hospitalisation", "soins_medicaux", "pharmacie", "optique", "dentaire", "divers"]
-    mapping_soins = {
-        soin: {
-            "frais_reels": f"frais_reels_{soin}",
-            "reste_a_charge": f"reste_a_charge_{soin}",
-            "remb_alptis": f"remb_alptis_{soin}",
-            "remb_ro": f"remb_ro_{soin}",
-        }
-        for soin in soins
-    }
-
-    def build_info_dict(df_client):
-        info = {}
-        for _, row in df_client.iterrows():
-            date = row["annee_mois_paiement"]
-            if date not in info:
-                info[date] = {}
-
-            for soin, cols in mapping_soins.items():
-                values = {k: row[v] for k, v in cols.items()}
-                if any(values.values()):
-                    info[date][soin] = values
-
-            if not info[date]:
-                del info[date]
-        return info
-
-    df_agg["info_par_annee_mois_paiement"] = df.groupby("client_code").apply(build_info_dict).reset_index(drop=True)
     return df_agg
-
 
 def aggregate_interaction(df_interaction):
     """Aggregate interactions by client: total count, motifs, services, channels, transfers, mail history"""
@@ -158,16 +144,21 @@ def aggregate_interaction(df_interaction):
     df_agg = df_agg.join(df_transfer, how="left")
 
     # Email history
-    df_mail = df[df["interaction_canal"] == "E-mail"].groupby("client_code").apply(
-        lambda x: dict(zip(x["interaction_date"], x["interaction_texte_mail"])) if not x.empty else {}
-    ).to_frame("interaction_historique_mail")
+    df_mail = (
+        df[df["interaction_canal"] == "E-mail"]
+        .groupby("client_code")[["interaction_date", "interaction_texte_mail"]]
+        .apply(lambda x: dict(zip(x["interaction_date"], x["interaction_texte_mail"])) if not x.empty else {},
+            include_groups=False)
+        .to_frame("interaction_historique_mail")
+    )
     df_agg = df_agg.join(df_mail, how="left")
 
     # Fill NaN with 0 (except mail history)
     for col in df_agg.columns:
         if col != "interaction_historique_mail":
             df_agg[col] = df_agg[col].fillna(0).astype(int)
-    df_agg["interaction_historique_mail"] = df_agg["interaction_historique_mail"].fillna({})
+    df_agg["interaction_historique_mail"] = df_agg["interaction_historique_mail"].apply(
+        lambda x: x if isinstance(x, dict) else {})
 
     return df_agg.reset_index()
 

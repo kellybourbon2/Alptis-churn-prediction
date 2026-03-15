@@ -24,7 +24,7 @@ def portefeuille_cleaning(df_portefeuille):
     ], inplace=True)
 
     # 2 - Replacing "00" in client_departement by NaN
-    df_portefeuille_cleaned["client_departement"].replace("00", pd.NA, inplace=True)
+    df_portefeuille_cleaned.replace({"client_departement": {"00": pd.NA}}, inplace=True)
 
     # 3 - Imputing missing values in courtier_type_commission based on courtier_code_apporteur
     mode_par_courtier = (
@@ -35,8 +35,4 @@ def portefeuille_cleaning(df_portefeuille):
     df_portefeuille_cleaned["courtier_type_commission"] = df_portefeuille_cleaned["courtier_type_commission"].fillna(
         df_portefeuille_cleaned["courtier_code_apporteur"].map(mode_par_courtier)
     )
-
-    #4 - encoding of important variables in portefeuille
-    df_portefeuille_cleaned = pd.get_dummies(data=df_portefeuille_cleaned, columns= ["client_structure_familiale","courtier_segmentation_interne", "courtier_type_commission", "client_ro_souscripteur","courtier_reseau_courtage"])
-
     return df_portefeuille_cleaned
