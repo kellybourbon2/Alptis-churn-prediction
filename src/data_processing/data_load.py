@@ -41,7 +41,7 @@ def _load_from_s3(set: str, files: dict) -> dict:
         s3_path = f"{Config.S3_BUCKET}/alptis/{set}/{filename}"
         try:
             with fs.open(s3_path, 'rb') as f:
-                data_frames[key] = pd.read_csv(f, sep=";", index_col=False)
+                data_frames[key] = pd.read_csv(f, sep=";", index_col=False, low_memory=False)
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found on S3: {s3_path}")
     return data_frames
