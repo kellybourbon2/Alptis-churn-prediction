@@ -4,38 +4,51 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
+#-----------------------------------------------
 #---------------DATA PROCESSING--------------
+#--------------------------------------------
 
 TARGET_COLUMN='target_resiliation_6mois'
 KEY_COLUMN = "client_code"
 
 REFERENCE_DATES = {
-    "training":  pd.Timestamp("2023-11-30"),
-    "validation": pd.Timestamp("2024-11-30"),  
-    "evaluation":  pd.Timestamp("2024-11-30")
+    "training":  pd.Timestamp("2023-12-01"),
+    "validation": pd.Timestamp("2024-12-01"),  
+    "evaluation":  pd.Timestamp("2024-12-01")
 }
 
-HIGH_CARDINALITY=10
-EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"]
-
-FILES_TO_DROP= "impaye"
-COLUMNS_TO_DROP = ["client_structure_familiale", 'annee_mois_paiement'] 
-#annee mois paiement: liste des mois de paiement, trouver moyen de le process pour modèle
-
+FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
+COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque"] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
 COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail', "client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
-COLUMNS_ORDINAL = ["age_categories", "courtier_anciennete_categories","client_nb_assures", "client"]
+
+
+#----FEATURES ENGINEERING----------------
 
 #categorical encoding
 ANCIENNETE_COURTIER_COLUMN = 'courtier_anciennete_annees'
-ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40] #cf graph of Overview alptis
+ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40] #cf graph of Overview alptis 
 ANCIENNETE_LABELS= ["new", "recent", "stable", "old", "very old"]
 
 AGE_COLUMN= "client_age_souscripteur"
 AGE_BINS = [18, 25, 35, 50, 60, 80, 120]  #based on younger and older person in portefeuille
 AGE_LABELS = ['young', 'adult', 'mature','middle aged', 'senior', 'senior plus'] 
 
-RECLA_DELAIS_COURT = 3 #(<3: court)
-RECLA_DELAIS_LONG= 15 #(>15: long, 3-15: moyen)
+RECLA_DELAIS_COURT = 3 #(<3 jours: court)
+RECLA_DELAIS_LONG= 15 #(>15 jours: long, 3-15: moyen)
+
+#--------ENCODING-------------------------------------
+
+HIGH_CARDINALITY=10
+EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
+
+COLUMNS_ORDINAL = {
+    "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
+    "courtier_anciennete_categories": ANCIENNETE_LABELS 
+}
+
+#variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
+TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
+TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation"]
 
 #----------ENVIRONNEMENT SETTING--------------------------
 
