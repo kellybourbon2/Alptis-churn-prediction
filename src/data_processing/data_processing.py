@@ -150,6 +150,7 @@ class DataProcessor:
         - Drop non-encodable (list/dict/timestamp) first to avoid select_dtypes crash
         - One-hot for low cardinality  (nunique <= high_cardinality, except for the variable in self.except_high_cardinality)
         - Target encoding for high cardinality (nunique > high_cardinality + variable in except_high_cardinality)
+        - Ordinal encoding for 
         """
         df = df.copy()
 

@@ -78,3 +78,11 @@ def data_loading(set: Literal["training", "validation", "evaluation"]) -> tuple[
         data_frames["reclamations"],
         data_frames["interactions"], 
         data_frames["impayes"])
+
+if __name__=="__main__":
+    dataset = "validation"
+    try: 
+        df= data_loading(dataset)
+        print(f"{dataset} dataset loaded with success")
+    except: 
+        raise Exception
