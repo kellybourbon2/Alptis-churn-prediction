@@ -8,6 +8,18 @@ Clone the repo and follow the following steps:
 ```bash
 uv sync
 source .venv/bin/activate
+
+[!IMPORTANT]
+Travailler toujours sur sa branche personnelle:
+```bash
+git switch <branche_personnelle>
+
+Avant chaque commit/push, checker qu'on est pas sur main:
+```bash
+git branch
+
+Ne jamais changer le main. Faire pull request (et informer le groupe whatsapp quand c'est fait pour merge avec main)
+
 ```
 ## Data Loading
 
@@ -41,6 +53,7 @@ AWS_DEFAULT_REGION= 'us-east-1'
 AWS_BUCKET_NAME='projet-bdc-data'
 ```
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
+
 
 ## Data Preprocessing
 
