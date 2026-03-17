@@ -13,14 +13,16 @@ source .venv/bin/activate
 Travailler toujours sur sa branche personnelle:
 ```bash
 git switch <branche_personnelle>
-
+```
+[!IMPORTANT]
 Avant chaque commit/push, checker qu'on est pas sur main:
 ```bash
 git branch
-
+```
+[!IMPORTANT]
 Ne jamais changer le main. Faire pull request (et informer le groupe whatsapp quand c'est fait pour merge avec main)
 
-```
+
 ## Data Loading
 
 Two loading modes are available depending on the variable `LOAD_FROM_S3` in `Config`
