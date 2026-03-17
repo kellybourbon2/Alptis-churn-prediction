@@ -12,14 +12,15 @@ TARGET_COLUMN='target_resiliation_6mois'
 KEY_COLUMN = "client_code"
 
 REFERENCE_DATES = {
-    "training":  pd.Timestamp("2023-12-01"),
-    "validation": pd.Timestamp("2024-12-01"),  
-    "evaluation":  pd.Timestamp("2024-12-01")
+    "training":  pd.Timestamp("2023-05-31"),
+    "validation": pd.Timestamp("2024-05-31"),  
+    "evaluation":  pd.Timestamp("2024-05-31")
 }
 
 FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
-COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque"] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
-COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail', "client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
+COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+#ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
+COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
 
 
 #----FEATURES ENGINEERING----------------
@@ -87,7 +88,7 @@ TRAINING_FILES = {
     "reclamations": "apprentissage_reclamations_2023_11.csv",
 }
 
-# Evaluation/Validation set files (2024-11)
+# Evaluation (2024-11)
 EVALUATION_FILES = {
     "consommations": "evaluation_consommations_2024_11.csv",
     "impayes": "evaluation_impayes_2024_11.csv",
@@ -96,9 +97,20 @@ EVALUATION_FILES = {
     "reclamations": "evaluation_reclamations_2024_11.csv",
 }
 
+#Validation files (2024-11)
+VALIDATION_FILES = {
+    "consommations": "validation_consommations_2024_11.csv",
+    "impayes": "validation_impayes_2024_11.csv",
+    "interactions": "validation_interactions_2024_11.csv",
+    "portefeuille": "validation_portefeuille_2024_11.csv",
+    "reclamations": "validation_reclamations_2024_11.csv",
+}
+
+
+
 # Map sets to their file configurations
 DATASET_MAPPING = {
     "training": TRAINING_FILES,
     "evaluation": EVALUATION_FILES,
-    "validation": EVALUATION_FILES,  
+    "validation": VALIDATION_FILES,  
 }
