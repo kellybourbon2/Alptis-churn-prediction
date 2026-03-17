@@ -7,7 +7,7 @@ Clone the repo and follow the following steps:
 ## Environement creation and activation
 ```bash
 uv sync
-source ./venv/bin/activate
+source .venv/bin/activate
 ```
 ## Data Loading
 
