@@ -8,19 +8,18 @@ Clone the repo and follow the following steps:
 ```bash
 uv sync
 source .venv/bin/activate
+```
 
-[!IMPORTANT]
-Travailler toujours sur sa branche personnelle:
+ **Attention !!** 
+ Travailler toujours sur sa branche personnelle:
 ```bash
 git switch <branche_personnelle>
 ```
-[!IMPORTANT]
-Avant chaque commit/push, checker qu'on est pas sur main:
+Avant chaque commit/push, checker qu'on est pas sur le main:
 ```bash
 git branch
 ```
-[!IMPORTANT]
-Ne jamais changer le main. Faire pull request (et informer le groupe whatsapp quand c'est fait pour merge avec main)
+Si jamais on veut pousser sur main: cf Kelly
 
 
 ## Data Loading
