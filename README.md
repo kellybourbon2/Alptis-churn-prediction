@@ -10,8 +10,7 @@ uv sync
 source .venv/bin/activate
 ```
 
- **Attention !!** 
- Travailler toujours sur sa branche personnelle:
+ **Attention !!:  Travailler toujours sur sa branche personnelle:**
 ```bash
 git switch <branche_personnelle>
 ```
