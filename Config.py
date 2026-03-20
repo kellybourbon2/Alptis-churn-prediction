@@ -18,7 +18,7 @@ REFERENCE_DATES = {
 }
 
 FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
-COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
 COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
 
@@ -44,7 +44,8 @@ EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
-    "courtier_anciennete_categories": ANCIENNETE_LABELS 
+    "courtier_anciennete_categories": ANCIENNETE_LABELS,
+    'client_frequence_paiement': ['SEM','MS','TRIM','AN'], #valeurs de frequence paiement ordonnées
 }
 
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
