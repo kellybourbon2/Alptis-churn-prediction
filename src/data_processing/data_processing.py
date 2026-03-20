@@ -50,6 +50,8 @@ class DataProcessor:
         self.mode                     = mode
         self.ref_date                 = get_reference_date(mode)
         self.scaler                   = None
+        self.encoded_columns          = None
+        self.target_encoding_maps = {} 
         self.target_col               = TARGET_COLUMN
         self.high_cardinality         = HIGH_CARDINALITY
         self.except_high_cardinality = EXCEPT_HIGH_CARDINALITY
@@ -60,29 +62,29 @@ class DataProcessor:
             | set(COLUMNS_TO_PROCESSED_WITH_NLP)
             | set(COLUMNS_TO_DROP)
         )
-        self.ordinal_columns= COLUMNS_ORDINAL
-
+        self.ordinal_orders = COLUMNS_ORDINAL   # from config
+        self.ordinal_maps   = {} #will be saved during training to be reused in test/val
+    
     # ------------------------------------------------------------------
-    # Full pipeline
+    # Pipelines run()
     # ------------------------------------------------------------------
-
     def run(self, optional_normalisation=True) -> pd.DataFrame:
-        """Full pipeline: load, manual preprocess, automatic encode and optionally normalize
-                Args: 
-                 optional_normalisation (bool): whether or not to apply normalisation (on numerical values)
-        """
-        # Load
+        """Pipeline TRAIN : fit_transform everything """
         df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes = data_loading(self.mode)
-
-        # Process
         df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes)
-        df_encoded   = self.data_encoding(df_processed)
+        df_encoded = self.data_encoding(df_processed)
         if optional_normalisation:
-            logging.info("Normalisation applied on numerical values")
-            df_ready = self.data_normalization(df_encoded)
-            return df_ready
-        else: 
-            return df_encoded
+            return self.data_normalization(df_encoded)
+        return df_encoded
+
+    def run_transform(self, optional_normalisation=True) -> pd.DataFrame:
+        """Pipeline TEST/VAL : transform only, without re-fitter"""
+        df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes = data_loading(self.mode)
+        df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes)
+        df_encoded = self.data_encoding_transform(df_processed)
+        if optional_normalisation:
+            return self.data_normalization_transform(df_encoded)
+        return df_encoded
 
     # ------------------------------------------------------------------
     # Step 1 : Manual preprocessing
@@ -145,81 +147,115 @@ class DataProcessor:
     # Step 2 : Encoding
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Encoding : fit_transform (call only on TRAIN dataset)
+    # ------------------------------------------------------------------
     def data_encoding(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Encode categorical columns not treated manually:
+
+        """Fit + transform (call on train dataset only) :
+         Encode categorical columns not treated manually:
         - Drop non-encodable (list/dict/timestamp) first to avoid select_dtypes crash
         - One-hot for low cardinality  (nunique <= high_cardinality, except for the variable in self.except_high_cardinality)
         - Target encoding for high cardinality (nunique > high_cardinality + variable in except_high_cardinality)
-        - Ordinal encoding for 
+        - Ordinal encoding for variables with values that can be ordered 
         """
         df = df.copy()
-
-        # Drop non-encodable columns (list, dict, timestamp) 
-        cols_to_drop = [
-            col for col in df.columns
-            if df[col].apply(lambda x: isinstance(x, (list, dict, pd.Timestamp))).any()
-        ]
-        df.drop(columns=cols_to_drop, inplace=True)
-        if cols_to_drop: 
-            logger.warning(f"Unencodable columns needed to be dropped: {cols_to_drop}")
-
-        # Encode categorical columns
-        cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
-        cat_cols = [c for c in cat_cols if c not in self.cols_to_exclude_encoding]
-
-        #keep track of one-hot/target/ordinal encoding var
-        one_hot_col=[]
-        target_col=[]
+        df = self._drop_unencodable(df)
+        cat_cols = self._get_cat_cols(df)
+        one_hot_col, target_col = [], []
 
         for col in cat_cols:
-            #ordinal encoding
-            if col in self.ordinal_columns:
-                ordinal_mapping = {label: i for i, label in enumerate(self.ordinal_columns[col])}
+            if col in self.ordinal_orders:
+                ordinal_mapping = {label: i for i, label in enumerate(self.ordinal_orders[col])}
+                self.ordinal_maps[col] = ordinal_mapping #save mapping for test/val
                 df[col] = df[col].map(ordinal_mapping).astype(float)
 
-            # one-hot encoding (low cardinality or in except_high_cardinality)
             elif (df[col].nunique() <= self.high_cardinality) or (col in self.except_high_cardinality):
                 dummies = pd.get_dummies(df[col], prefix=col, dtype=int)
                 df = pd.concat([df.drop(columns=col), dummies], axis=1)
                 one_hot_col.append(col)
-               
+
             else:
-            #target encoding
-                means = df.groupby(col)[self.target_col].mean()
+                means = df.groupby(col)[self.target_col].mean()   # fit on train
+                self.target_encoding_maps[col] = means            # save for later (train and validation)
                 df[col] = df[col].map(means)
                 target_col.append(col)
 
-        logger.info(f"Encoded with one-hot encoding: {one_hot_col}")
-        logger.info(f"Encoded with target encoding: {target_col}")
-        logger.info(f"Encoded with ordinal encoding: {self.ordinal_columns}")
+        # Save columns after encoding (important for reuse on dataset)
+        self.encoded_columns = df.columns.tolist()
+
+        logger.info(f"Columns that are One-hot encoded: {one_hot_col}")
+        logger.info(f"Columns that are Target encoded: {target_col}")
+        logger.info(f"Columns that are Ordinal encoded: {self.ordinal_maps.items()}")
 
         return df
 
     # ------------------------------------------------------------------
-    # Step 3 : Normalization
+    # Encoding : transform only (sur le TEST/VALIDATION)
     # ------------------------------------------------------------------
-
-    def data_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Normalize continuous numeric columns (nunique > high_cardinality).
-        Stores scaler as attribute for reuse on test/inference data.
-        """
+    def data_encoding_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Transform only using the encoder fitted on train (to call on test/val)"""
         df = df.copy()
+        df = self._drop_unencodable(df)
+        cat_cols = self._get_cat_cols(df)
 
-        num_cols = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
-        cols_to_normalize = [
-            col for col in num_cols
-            if col not in self.cols_to_exclude_encoding
-            and df[col].nunique() > self.high_cardinality #not normalize one-hot encoded variables
-            and col not in self.except_high_cardinality #not normalize one-hot encoded var (except_high_car: variable that is one-hot encoded)
-        ]
+        for col in cat_cols:
+            if col in self.ordinal_maps:
+                df[col] = df[col].map(self.ordinal_maps[col]).astype(float)
 
+            elif col in self.target_encoding_maps:
+                global_mean = list(self.target_encoding_maps[col])[0]  # fallback
+                df[col] = df[col].map(self.target_encoding_maps[col]).fillna(global_mean)
+
+            elif (df[col].nunique() <= self.high_cardinality) or (col in self.except_high_cardinality):
+                dummies = pd.get_dummies(df[col], prefix=col, dtype=int)
+                df = pd.concat([df.drop(columns=col), dummies], axis=1)
+
+        # Realign columns on train dataset (missing columns → 0, unknow columns → drop)
+        target = self.target_col
+        expected = [c for c in self.encoded_columns if c != target]
+        df = df.reindex(columns=expected, fill_value=0)
+
+        return df
+
+    # ------------------------------------------------------------------
+    # Normalization : fit_transform (train) vs transform (test/validation)
+    # ------------------------------------------------------------------
+    def data_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Fit + transform (train only):
+        normalize columns that are numericals, non binary and not one-hot encoded"""
+
+        df = df.copy()
+        cols_to_normalize = self._get_cols_to_normalize(df)
         self.scaler = StandardScaler()
         df[cols_to_normalize] = self.scaler.fit_transform(df[cols_to_normalize])
-        logger.info(f"Normalized: {cols_to_normalize}")
-
+        self.normalized_columns = cols_to_normalize    # ← save to use again in test/val
         return df
 
-    # UTILS : functions that replace the NaN Values with '0' in aggregated files
+    def data_normalization_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Transform only (test/val):
+        Normalize function fitted on train dataset: 
+        normalize columns that are numericals, non binary and not one-hot encoded
+        """
+        df = df.copy()
+        df[self.normalized_columns] = self.scaler.transform(df[self.normalized_columns])
+        return df
+
+    #-------------UTILS---------------------
+    def _drop_unencodable(self, df):
+        cols_to_drop = [col for col in df.columns if df[col].apply(lambda x: isinstance(x, (list, dict, pd.Timestamp))).any()]
+        return df.drop(columns=cols_to_drop)
+
+    def _get_cat_cols(self, df):
+        cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+        return [c for c in cat_cols if c not in self.cols_to_exclude_encoding]
+
+    def _get_cols_to_normalize(self, df):
+        num_cols = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
+        return [col for col in num_cols if col not in self.cols_to_exclude_encoding and df[col].nunique() > self.high_cardinality and col not in self.except_high_cardinality]
+
+
+    # functions that replace the NaN Values with '0' in aggregated files
     def _fill_reclamations_na(self, df: pd.DataFrame) -> None:
         exclude_cols = {
             "recla_canal_entrant_principale",
@@ -245,6 +281,21 @@ class DataProcessor:
 # ----------------------------------------------------------------------
 
 if __name__ == "__main__":
-    processor = DataProcessor(mode="training")
-    df_ready  = processor.run()
-    print(df_ready.head(10))
+
+    # Training
+    train_processor = DataProcessor(mode="training")
+    df_train = train_processor.run()
+
+    # Test :
+    test_processor = DataProcessor(mode="evaluation")
+
+    #  Reuse the same pre-processor fitted on training dataset
+    # (so no data-leakage with target-encoding....)
+    test_processor.target_encoding_maps = train_processor.target_encoding_maps
+    test_processor.ordinal_maps          = train_processor.ordinal_maps
+    test_processor.encoded_columns       = train_processor.encoded_columns
+    test_processor.scaler                = train_processor.scaler
+    test_processor.normalized_columns    = train_processor.normalized_columns
+
+    df_test = test_processor.run_transform()
+    df_test.head(5)
