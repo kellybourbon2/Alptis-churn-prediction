@@ -21,5 +21,4 @@ __pycache__/
 
 #Perso HKA
 notes-dev.md
-demo_random_forest.ipynb
-externals/*
+perso_demo_random_forest.ipynb
