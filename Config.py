@@ -41,7 +41,7 @@ RECLA_DELAIS_LONG= 15 #(>15 jours: long, 3-15: moyen)
 
 HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
-NO_ACTION_HIGH_CARDINALITY = ["client_code_postal"]
+NO_ACTION_HIGH_CARDINALITY = ["client_code_postal", "client_departement"] #No target encoding
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
