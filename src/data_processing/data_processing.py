@@ -1,3 +1,5 @@
+"""File where the whole data processing is conducted"""
+
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -52,6 +54,8 @@ class DataProcessor:
         self.scaler                   = None
         self.encoded_columns          = None
         self.target_encoding_maps = {} 
+        self.normalized_columns = None
+        self.global_means= {} #mean of target on training dataset (use to fill new values when target-encoding)
         self.target_col               = TARGET_COLUMN
         self.high_cardinality         = HIGH_CARDINALITY
         self.except_high_cardinality = EXCEPT_HIGH_CARDINALITY
@@ -175,7 +179,8 @@ class DataProcessor:
                 df = pd.concat([df.drop(columns=col), dummies], axis=1)
                 one_hot_col.append(col)
 
-            else:
+            else: #target-encoding
+                self.global_means[col]= df[self.target_col].mean()   #save the global mean of target on whole training dataset(to fill new values btw training-validation/training-evaluation)
                 means = df.groupby(col)[self.target_col].mean()   # fit on train
                 self.target_encoding_maps[col] = means            # save for later (train and validation)
                 df[col] = df[col].map(means)
@@ -204,8 +209,9 @@ class DataProcessor:
                 df[col] = df[col].map(self.ordinal_maps[col]).astype(float)
 
             elif col in self.target_encoding_maps:
-                global_mean = list(self.target_encoding_maps[col])[0]  # fallback
-                df[col] = df[col].map(self.target_encoding_maps[col]).fillna(global_mean)
+                global_mean = self.global_means[col]              
+                df[col] = df[col].map(self.target_encoding_maps[col]) #encode with target-mean computed on training dataset
+                df[col] = df[col].fillna(global_mean) #then fill missing values (new values in validation/evaluation with global_means)
 
             elif (df[col].nunique() <= self.high_cardinality) or (col in self.except_high_cardinality):
                 dummies = pd.get_dummies(df[col], prefix=col, dtype=int)
@@ -213,7 +219,7 @@ class DataProcessor:
 
         # Realign columns on train dataset (missing columns → 0, unknow columns → drop)
         target = self.target_col
-        expected = [c for c in self.encoded_columns if c != target]
+        expected = [c for c in self.encoded_columns]
         df = df.reindex(columns=expected, fill_value=0)
 
         return df
@@ -229,7 +235,7 @@ class DataProcessor:
         cols_to_normalize = self._get_cols_to_normalize(df)
         self.scaler = StandardScaler()
         df[cols_to_normalize] = self.scaler.fit_transform(df[cols_to_normalize])
-        self.normalized_columns = cols_to_normalize    # ← save to use again in test/val
+        self.normalized_columns = cols_to_normalize    # save to use again in test/val
         return df
 
     def data_normalization_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -290,7 +296,8 @@ if __name__ == "__main__":
     test_processor = DataProcessor(mode="evaluation")
 
     #  Reuse the same pre-processor fitted on training dataset
-    # (so no data-leakage with target-encoding....)
+    # (so no data-leakage with target-encoding, normalization, ....)
+    test_processor.global_means = train_processor.global_means   #save global target % to fill new values for target-encoded columns
     test_processor.target_encoding_maps = train_processor.target_encoding_maps
     test_processor.ordinal_maps          = train_processor.ordinal_maps
     test_processor.encoded_columns       = train_processor.encoded_columns
