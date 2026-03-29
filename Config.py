@@ -27,12 +27,12 @@ COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbat
 
 #categorical encoding
 ANCIENNETE_COURTIER_COLUMN = 'courtier_anciennete_annees'
-ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40] #cf graph of Overview alptis 
-ANCIENNETE_LABELS= ["new", "recent", "stable", "old", "very old"]
+ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40, 120] #cf graph of Overview alptis 
+ANCIENNETE_LABELS= ["new", "recent", "stable", "old", "very old", "ancient"]
 
 AGE_COLUMN= "client_age_souscripteur"
-AGE_BINS = [18, 25, 35, 50, 60, 80, 120]  #based on younger and older person in portefeuille
-AGE_LABELS = ['young', 'adult', 'mature','middle aged', 'senior', 'senior plus'] 
+AGE_BINS = [0, 18, 25, 35, 50, 60, 80, 120]  #based on younger and older person in portefeuille (one person has 16 yo...)
+AGE_LABELS = ['child', 'young', 'adult', 'mature','middle aged', 'senior', 'senior plus'] 
 
 RECLA_DELAIS_COURT = 3 #(<3 jours: court)
 RECLA_DELAIS_LONG= 15 #(>15 jours: long, 3-15: moyen)
@@ -65,7 +65,7 @@ load_dotenv(override=True)
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
-LOAD_FROM_S3 = True
+LOAD_FROM_S3 = False
 
 #If LOAD_FROM_S3=False, put dataset in following dir: 
 DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
