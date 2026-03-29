@@ -59,10 +59,12 @@ AWS_BUCKET_NAME='projet-bdc-data'
 
 Located in `src/data_processing/`, the preprocessing module handles data cleaning and preparation:
 
-- **`pipeline_processing.py`**: Orchestrates the complete preprocessing pipeline, coordinating cleaning and aggregation steps to produce a merged, client-level dataset
+- **`data_load.py`**: Handles data loading from either local storage or S3 based on configuration
+- **`data_processing.py`**: Orchestrates the complete preprocessing pipeline, coordinating cleaning and aggregation steps to produce a merged, client-level dataset
 - **`cleaning.py`**: Cleans the portfolio data through feature engineering, missing value imputation, and categorical encoding
 - **`aggregation.py`**: Aggregates secondary files (reclamations, consumptions, interactions, overdue payments) at the client level
-- **`data_load.py`**: Handles data loading from either local storage or S3 based on configuration
+- **`feature_engineering.py`**: Handles the creation of the new variables (courtier_anciennete_categories, client_age_categories, ...)
+- **`data_external.py`**: Handles the integration of external variables (revenue of commune in 2021 from Insee, ...)
 
 #### Demo (only for dev - to delete later)
 Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
