@@ -10,6 +10,7 @@ dependencies = [
     "fsspec>=2026.2.0",
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.8",
+    "openpyxl>=3.1.5",
     "pandas>=3.0.1",
     "pytest>=9.0.2",
     "requests>=2.32.5",

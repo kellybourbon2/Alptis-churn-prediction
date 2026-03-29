@@ -30,7 +30,8 @@ from Config import (
     FILES_TO_DROP,
     COLUMNS_TO_DROP,
     COLUMNS_TO_PROCESSED_WITH_NLP,
-    COLUMNS_ORDINAL
+    COLUMNS_ORDINAL,
+    NO_ACTION_HIGH_CARDINALITY,
 )
 
 def get_reference_date(mode: Literal["training", "validation", "evaluation"]) -> pd.Timestamp:
@@ -61,6 +62,7 @@ class DataProcessor:
             {TARGET_COLUMN}
             | set(COLUMNS_TO_PROCESSED_WITH_NLP)
             | set(COLUMNS_TO_DROP)
+            | set(NO_ACTION_HIGH_CARDINALITY)
         )
         self.ordinal_orders = COLUMNS_ORDINAL   # from config
         self.ordinal_maps   = {} #will be saved during training to be reused in test/val
@@ -214,6 +216,7 @@ class DataProcessor:
         # Realign columns on train dataset (missing columns → 0, unknow columns → drop)
         target = self.target_col
         expected = [c for c in self.encoded_columns if c != target]
+        expected.append(target) # Rajout de la variable target, sinon on la perd à la fin du pipeline pour les données de test/evaluation
         df = df.reindex(columns=expected, fill_value=0)
 
         return df
@@ -240,6 +243,14 @@ class DataProcessor:
         df = df.copy()
         df[self.normalized_columns] = self.scaler.transform(df[self.normalized_columns])
         return df
+
+    def add_external_data(self, df:pd.DataFrame) -> pd.DataFrame:
+        """Apply transformation on some columns based on external data
+        Normalize data based on a commune-specific value
+        """
+        df = df.copy()
+
+
 
     #-------------UTILS---------------------
     def _drop_unencodable(self, df):

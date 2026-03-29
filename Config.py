@@ -41,6 +41,7 @@ RECLA_DELAIS_LONG= 15 #(>15 jours: long, 3-15: moyen)
 
 HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
+NO_ACTION_HIGH_CARDINALITY = ["client_code_postal", "client_departement"] #No target encoding
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
@@ -115,3 +116,7 @@ DATASET_MAPPING = {
     "evaluation": EVALUATION_FILES,
     "validation": VALIDATION_FILES,  
 }
+
+
+# Cols to be transformed with external data
+COLUMNS_EXTERNAL_TRANSFORM = ['client_cotisations_annualisees_n_moins2', 'client_cotisations_annualisees_n_moins1', 'client_cotisations_annualisees_n', 'client_cotisations_annualisees_n_plus1']
