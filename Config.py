@@ -12,9 +12,9 @@ TARGET_COLUMN='target_resiliation_6mois'
 KEY_COLUMN = "client_code"
 
 REFERENCE_DATES = {
-    "training":  pd.Timestamp("2023-05-31"),
-    "validation": pd.Timestamp("2024-05-31"),  
-    "evaluation":  pd.Timestamp("2024-05-31")
+    "training":  pd.Timestamp("2024-05-31"),
+    "validation": pd.Timestamp("2025-05-31"),  
+    "evaluation":  pd.Timestamp("2025-05-31")
 }
 
 FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
@@ -65,7 +65,7 @@ load_dotenv(override=True)
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
-LOAD_FROM_S3 = True
+LOAD_FROM_S3 = False
 
 #If LOAD_FROM_S3=False, put dataset in following dir: 
 DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")

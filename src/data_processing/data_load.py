@@ -16,7 +16,7 @@ def _load_from_local(set: str, files: dict) -> dict:
     for key, filename in files.items():
         filepath = os.path.join(Config.DATA_RAW_DIR, set, filename)
         try:
-            data_frames[key] = pd.read_csv(filepath, sep=";", index_col=False)
+            data_frames[key] = pd.read_csv(filepath, sep=";", index_col=False,low_memory=False )
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found: {filepath}")
     return data_frames
