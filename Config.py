@@ -37,6 +37,10 @@ AGE_LABELS = ['young', 'adult', 'mature','middle aged', 'senior', 'senior plus']
 RECLA_DELAIS_COURT = 3 #(<3 jours: court)
 RECLA_DELAIS_LONG= 15 #(>15 jours: long, 3-15: moyen)
 
+#external data 
+NEW_COLUMN_REVENU_INSEE = "client_revenu_commune_2021"
+REVENU_MEDIAN_FRANCE_2021 = 23160
+
 #--------ENCODING-------------------------------------
 
 HIGH_CARDINALITY=10
@@ -61,13 +65,11 @@ load_dotenv(override=True)
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
-LOAD_FROM_S3 = True
+LOAD_FROM_S3 = False
 
 #If LOAD_FROM_S3=False, put dataset in following dir: 
 DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
 
-#Merged dataset directory in SPPCloud in format parquet
-MERGED_PARQUET_S3= "projet-bdc-alptis-g2/data_merged.parquet"
 
 # S3 config
 S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "")
