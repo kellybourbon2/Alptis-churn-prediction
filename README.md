@@ -71,9 +71,17 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 
 # TO DO 
 
-- check les test qui ont fail (pytest tests/test_processing.py): sinon impossible que modèle puisse tourner
-- split test/train dans un .py (selon une variable de config TEST_SAMPLE_SIZE)
-- trainining.py, evaluation.py : py pour définir entrainement et evaluation puis run avec MLFlow
+>Performance du modèle:
+créer un script a faire tourner sur mlflow pour chaque type de modèle:
+- reg_logistique
+-boosting
+- random_forest
+
+>Analyse quantitative:
+analyser les mails (BERT TOpics) et les topics qui reviennet le +
+analyser les avis nps (<3 ou avis nps des clients ayant résiliés) avec BERT Topic
+
+
 
 --> **ATTENTION: QUAND CREE FONCTION FIT, VIRER CLIENT_CODE (Variable KEY_COLUMN dans Config)**
 --> SINON RISQUE DOVERFIT SUR CA (On peut pas la drop au moment du data processing sinon perd info quand fait prédiction)
