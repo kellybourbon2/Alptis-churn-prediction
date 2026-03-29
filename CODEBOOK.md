@@ -1,4 +1,4 @@
-# Features engineering (before encoding)
+# Features engineering/External data (before encoding)
 
 | Variable       | Type    | Description                        | 
 |----------------|---------|------------------------------------|
@@ -14,5 +14,5 @@
 | interaction_motif_...|int | 7 variables (7 pour les 7 motifs les + fréquents): chacune compte le nombre d'interaction réalisée par le client pour le motif précisé |
 | frais_reel_...|float | Autant de variables que de catégories de soin:  chaque variable compte le nombre total de frais_reels sur toute l'annee pour le client, et la catégorie spécifiée|
 | reste_à_charge_...|float | Autant de variables que de catégories de soin:  chaque variable compte le nombre total de reste_a_charge sur toute l'annee pour le client, et la catégorie spécifiée |
-
+| client_revenu_commune_2021...|int | Il s'agit du revenu médian dans la commune de provenance du client|
 
