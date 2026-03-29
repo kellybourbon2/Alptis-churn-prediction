@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
+import optuna
 import mlflow
 from itertools import product
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
@@ -65,6 +66,18 @@ for penalty, class_weight in product(*params_grid.values()):
         mlflow.log_metric("roc_auc", auc)
         mlflow.sklearn.log_model(model, "logistic_regression")
 
+#Grid search with optuna (library that helps to do faster and smarter grid)
+def objective(trial):
+    penalty = trial.suggest_categorical("penalty", ["l1", "l2", "elasticnet"])
+    class_weight = trial.suggest_categorical("class_weight", ["balanced", None])
+    
+    model = LogisticRegression(penalty=penalty, class_weight=class_weight, ...)
+    model.fit(X_train, y_train)
+    return roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=20)  # 20 trials intelligents vs 100 bêtes
+
 # Experiment 2: LogisticRegressionCV 
 params_grid_cv = {
     "penalty":      ["l1", "l2", "elasticnet"],
@@ -83,9 +96,9 @@ for penalty, class_weight, cv in product(*params_grid_cv.values()):
             penalty=penalty,
             class_weight=class_weight,
             solver=solver_map[penalty],
-            l1_ratios=[0.3, 0.5, 0.7] if penalty == "elasticnet" else None,
+            **({"l1_ratios": [0.3, 0.5, 0.7]} if penalty == "elasticnet" else {}),
             cv=cv,
-            scoring="roc_auc",      # optimise the penalty C of regularisation on roc_auc
+            scoring="roc_auc",
             max_iter=1000,
             n_jobs=-1
         )

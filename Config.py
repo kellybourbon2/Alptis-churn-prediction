@@ -18,7 +18,9 @@ REFERENCE_DATES = {
 }
 
 FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
-COLUMNS_TO_DROP = ["client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
+                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
 COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
 
@@ -27,7 +29,7 @@ COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbat
 
 #categorical encoding
 ANCIENNETE_COURTIER_COLUMN = 'courtier_anciennete_annees'
-ANCIENNETE_BINS = [0, 2, 7, 12, 20, 40, 120] #cf graph of Overview alptis 
+ANCIENNETE_BINS = [-1, 2, 7, 12, 20, 40, 200] #cf graph of Overview alptis (-1 )
 ANCIENNETE_LABELS= ["new", "recent", "stable", "old", "very old", "ancient"]
 
 AGE_COLUMN= "client_age_souscripteur"
@@ -45,7 +47,7 @@ REVENU_MEDIAN_FRANCE_2021 = 23160
 
 HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
-NO_ACTION_HIGH_CARDINALITY = ["client_code_postal", "client_departement"] #No target encoding
+
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]

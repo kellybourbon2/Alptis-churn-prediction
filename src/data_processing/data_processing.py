@@ -34,7 +34,6 @@ from Config import (
     COLUMNS_TO_DROP,
     COLUMNS_TO_PROCESSED_WITH_NLP,
     COLUMNS_ORDINAL,
-    NO_ACTION_HIGH_CARDINALITY,
     NEW_COLUMN_REVENU_INSEE, 
     REVENU_MEDIAN_FRANCE_2021, 
     KEY_COLUMN
@@ -70,7 +69,6 @@ class DataProcessor:
             {TARGET_COLUMN}
             | set(COLUMNS_TO_PROCESSED_WITH_NLP)
             | set(COLUMNS_TO_DROP)
-            | set(NO_ACTION_HIGH_CARDINALITY)
         )
         self.ordinal_orders = COLUMNS_ORDINAL   # from config
         self.ordinal_maps   = {} #will be saved during training to be reused in test/val
