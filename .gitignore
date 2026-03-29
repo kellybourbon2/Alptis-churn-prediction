@@ -19,4 +19,6 @@ __pycache__/
 /__pycache__
 *.ruff_cache
 
-
+#Perso HKA
+notes-dev.md
+perso_demo_random_forest.ipynb
