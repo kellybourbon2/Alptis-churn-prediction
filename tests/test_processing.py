@@ -1,7 +1,8 @@
-# tests/test_data_processing.py
+# tests on data processing (training, validation and evaluation datasets)
+
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1])) #so src is visible
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pytest
 import numpy as np
@@ -28,8 +29,8 @@ def df_encoded(processor, df_processed):
     return processor.data_encoding(df_processed)
 
 @pytest.fixture(scope="session")
-def df_ready(processor, df_encoded):
-    return processor.data_normalization(df_encoded)
+def df_ready(processor):
+    return processor.run()
 
 @pytest.fixture(scope="session")
 def target_col():
@@ -49,6 +50,30 @@ def cols_normalized(df_ready, target_col, high_cardinality):
         if col != target_col
         and df_ready[col].nunique() > high_cardinality
     ]
+
+# ── Validation / Evaluation fixtures ──────────────────────────────
+
+def _make_transform_processor(mode: str, train_processor):
+    """Helper: build a transform-only processor reusing train fitted params"""
+    from src.data_processing.data_processing import DataProcessor
+    p = DataProcessor(mode=mode)
+    p.global_means           = train_processor.global_means
+    p.target_encoding_maps   = train_processor.target_encoding_maps
+    p.ordinal_maps           = train_processor.ordinal_maps
+    p.encoded_columns        = train_processor.encoded_columns
+    p.scaler                 = train_processor.scaler
+    p.normalized_columns     = train_processor.normalized_columns
+    return p
+
+@pytest.fixture(scope="session")
+def df_validation(processor, df_ready):   # df_ready ensures processor is already fitted
+    p = _make_transform_processor("validation", processor)
+    return p.run_transform()
+
+@pytest.fixture(scope="session")
+def df_evaluation(processor, df_ready):   # df_ready ensures processor is already fitted
+    p = _make_transform_processor("evaluation", processor)
+    return p.run_transform()
 
 
 # ------------------------------------------------------------------
@@ -150,7 +175,6 @@ class TestNormalization:
     def test_no_nan_after_normalization(self, df_ready, cols_normalized):
         """Normalization should not introduce NaN"""
         nan_cols = [col for col in cols_normalized if df_ready[col].isna().sum() > 0]
-        
         assert len(nan_cols) == 0, \
             f"Columns with NaN after normalization: {nan_cols}"
 
@@ -172,17 +196,14 @@ class TestNormalization:
 
 
 # ------------------------------------------------------------------
-# 4. Final dataset tests
+# 4. Final dataset tests (train)
 # ------------------------------------------------------------------
 
 class TestFinalDataset:
 
     def test_no_constant_columns(self, df_ready):
         """No constant columns (variance = 0)"""
-        constant_cols = [
-            col for col in df_ready.columns
-            if df_ready[col].nunique() <= 1
-        ]
+        constant_cols = [col for col in df_ready.columns if df_ready[col].nunique() <= 1]
         assert constant_cols == [], f"Constant columns found: {constant_cols}"
 
     def test_no_quasi_constant_columns(self, df_ready, threshold=0.95):
@@ -213,3 +234,85 @@ class TestFinalDataset:
     def test_client_code_present(self, df_ready):
         """client_code column should be present"""
         assert "client_code" in df_ready.columns, "client_code column missing from final dataset"
+
+    def test_no_nan_in_final(self, df_ready):
+        """Final dataset should contain no NaN values"""
+        nan_counts = df_ready.isna().sum()
+        cols_with_nan = nan_counts[nan_counts > 0]
+        assert cols_with_nan.empty, \
+            f"Final dataset has NaN values in the following columns:\n{cols_with_nan}"
+
+
+# ------------------------------------------------------------------
+# 5. Validation / Evaluation final dataset tests
+# ------------------------------------------------------------------
+
+def _assert_final_dataset_quality(df, dataset_name, target_col):
+    """Shared assertions for validation and evaluation final datasets"""
+
+    # No NaN
+    nan_counts = df.isna().sum()
+    cols_with_nan = nan_counts[nan_counts > 0]
+    assert cols_with_nan.empty, \
+        f"[{dataset_name}] NaN values in columns:\n{cols_with_nan}"
+
+    # No infinite values
+    num_cols = df.select_dtypes(include=[np.number]).columns
+    inf_cols = [col for col in num_cols if np.isinf(df[col]).any()]
+    assert inf_cols == [], \
+        f"[{dataset_name}] Infinite values in: {inf_cols}"
+
+    # No object columns remaining
+    obj_cols = [c for c in df.select_dtypes(include=["object", "category"]).columns if c != target_col]
+    assert obj_cols == [], \
+        f"[{dataset_name}] Object/category columns still present: {obj_cols}"
+
+    # No duplicate columns
+    assert len(df.columns) == len(set(df.columns)), \
+        f"[{dataset_name}] Duplicate column names found"
+
+    # client_code present
+    assert "client_code" in df.columns, \
+        f"[{dataset_name}] client_code column missing"
+
+
+class TestValidationFinalDataset:
+
+    def test_no_nan(self, df_validation, target_col):
+        """Validation final dataset has no NaN"""
+        _assert_final_dataset_quality(df_validation, "validation", target_col)
+
+    def test_same_columns_as_train(self, df_validation, df_ready, target_col):
+        """Validation dataset has same columns as train (after dropping target)"""
+        train_cols = set(df_ready.columns)
+        val_cols   = set(df_validation.columns)
+        missing = train_cols - val_cols - {target_col}
+        extra   = val_cols - train_cols
+        assert not missing, f"[validation] Missing columns vs train: {missing}"
+        assert not extra,   f"[validation] Extra columns vs train: {extra}"
+
+    def test_one_row_per_client(self, df_validation):
+        """No duplicate client_code in validation"""
+        assert df_validation["client_code"].duplicated().sum() == 0, \
+            "[validation] Duplicate client_code found"
+
+
+class TestEvaluationFinalDataset:
+
+    def test_no_nan(self, df_evaluation, target_col):
+        """Evaluation final dataset has no NaN"""
+        _assert_final_dataset_quality(df_evaluation, "evaluation", target_col)
+
+    def test_same_columns_as_train(self, df_evaluation, df_ready, target_col):
+        """Evaluation dataset has same columns as train (after dropping target)"""
+        train_cols = set(df_ready.columns)
+        eval_cols  = set(df_evaluation.columns)
+        missing = train_cols - eval_cols - {target_col}
+        extra   = eval_cols - train_cols
+        assert not missing, f"[evaluation] Missing columns vs train: {missing}"
+        assert not extra,   f"[evaluation] Extra columns vs train: {extra}"
+
+    def test_one_row_per_client(self, df_evaluation):
+        """No duplicate client_code in evaluation"""
+        assert df_evaluation["client_code"].duplicated().sum() == 0, \
+            "[evaluation] Duplicate client_code found"
