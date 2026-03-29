@@ -17,7 +17,7 @@ def add_revenu_insee(df, path_insee_commune, new_column_revenu_name= NEW_COLUMN_
         Returns: 
          df: Datafram with new column from Insee
     """
-    df_revenu = pd.read_excel(io=path_insee_commune)
+    df_revenu = pd.read_csv("data_external/revenu_median_communes.csv", sep=";", index_col=False)
 
     # STEP 1 : Nettoyer les revenus invalides
     invalid = ["N/A - secret statistique", "N/A - résultat non disponible"]
