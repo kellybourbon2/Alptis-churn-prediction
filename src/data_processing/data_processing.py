@@ -22,6 +22,7 @@ from src.data_processing.aggregation import (
 )
 from src.data_processing.cleaning import portefeuille_cleaning
 from src.data_processing.feature_engineering import feature_engineering
+from src.data_processing.data_external import add_revenu_insee
 
 
 from Config import (
@@ -32,7 +33,11 @@ from Config import (
     FILES_TO_DROP,
     COLUMNS_TO_DROP,
     COLUMNS_TO_PROCESSED_WITH_NLP,
-    COLUMNS_ORDINAL
+    COLUMNS_ORDINAL,
+    NO_ACTION_HIGH_CARDINALITY,
+    NEW_COLUMN_REVENU_INSEE, 
+    REVENU_MEDIAN_FRANCE_2021, 
+    KEY_COLUMN
 )
 
 def get_reference_date(mode: Literal["training", "validation", "evaluation"]) -> pd.Timestamp:
@@ -43,7 +48,7 @@ def get_reference_date(mode: Literal["training", "validation", "evaluation"]) ->
 
 class DataProcessor:
     """Data Processing following that order:
-         1. manual preprocessing: cleaning, aggregating, feature engineering and drop unnecessary columns
+         1. manual preprocessing: cleaning, aggregating, feature engineering, external data and drop unnecessary columns
          2. automatic encoding of categorical variables (ordinal, target or one-hot given config)
          3. Normalization of numerical variables (non categoricals)
     """
@@ -65,9 +70,11 @@ class DataProcessor:
             {TARGET_COLUMN}
             | set(COLUMNS_TO_PROCESSED_WITH_NLP)
             | set(COLUMNS_TO_DROP)
+            | set(NO_ACTION_HIGH_CARDINALITY)
         )
         self.ordinal_orders = COLUMNS_ORDINAL   # from config
         self.ordinal_maps   = {} #will be saved during training to be reused in test/val
+        self.key_column= KEY_COLUMN
     
     # ------------------------------------------------------------------
     # Pipelines run()
@@ -102,7 +109,14 @@ class DataProcessor:
         df_interactions,
         df_impayes,
     ) -> pd.DataFrame:
-        """Complete manual preprocessing pipeline: clean, aggregate, merge, fill NAs and drop unnecessary columns.
+        """Complete manual preprocessing pipeline: 
+        1. clean
+        2. aggregate
+        3. merge on key ()
+        4. features engineeering
+        5. add external data
+        6: fill NAs
+        7: drop unnecessary columns.
 
         Args:
             df_portefeuille:  Portfolio DataFrame
@@ -126,18 +140,21 @@ class DataProcessor:
         # Step 3: Merge all on client_code
         df = df_portefeuille.copy()
         for other_df in [df_reclamations, df_consommations, df_impayes, df_interactions]:
-            df = df.merge(other_df, how="left", on="client_code")
+            df = df.merge(other_df, how="left", on= self.key_column)
 
         # Step 4: Feature engineering
         df = feature_engineering(df, ref_date= self.ref_date)
 
-        # Step 5: Fill missing values by feature type
+        #Step 5: Add external data
+        df = add_revenu_insee(df, path_insee_commune="data_external/revenu_median_communes.xlsx", new_column_revenu_name= NEW_COLUMN_REVENU_INSEE, revenu_median_fr= REVENU_MEDIAN_FRANCE_2021)
+
+        # Step 6: Fill missing values by feature type
         self._fill_reclamations_na(df)
         self._fill_consumption_na(df)
         self._fill_interactions_na(df)
         self._fill_overdue_na(df)
 
-        # Step 6: Drop useless columns
+        # Step 7: Drop useless columns
         cols_to_drop = [
             col for col in df.columns
             if col.startswith(self.files_to_drop) or col in self.columns_to_drop
@@ -146,6 +163,7 @@ class DataProcessor:
         logger.info(f"Dropped columns from dataset: {cols_to_drop}")
 
         return df
+    
 
     # ------------------------------------------------------------------
     # Step 2 : Encoding
@@ -220,6 +238,7 @@ class DataProcessor:
         # Realign columns on train dataset (missing columns → 0, unknow columns → drop)
         target = self.target_col
         expected = [c for c in self.encoded_columns]
+        expected.append(target) # Rajout de la variable target, sinon on la perd à la fin du pipeline pour les données de test/evaluation
         df = df.reindex(columns=expected, fill_value=0)
 
         return df
@@ -235,7 +254,7 @@ class DataProcessor:
         cols_to_normalize = self._get_cols_to_normalize(df)
         self.scaler = StandardScaler()
         df[cols_to_normalize] = self.scaler.fit_transform(df[cols_to_normalize])
-        self.normalized_columns = cols_to_normalize    # save to use again in test/val
+        self.normalized_columns = cols_to_normalize    # ← save to use again in test/val
         return df
 
     def data_normalization_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -246,6 +265,14 @@ class DataProcessor:
         df = df.copy()
         df[self.normalized_columns] = self.scaler.transform(df[self.normalized_columns])
         return df
+
+    def add_external_data(self, df:pd.DataFrame) -> pd.DataFrame:
+        """Apply transformation on some columns based on external data
+        Normalize data based on a commune-specific value
+        """
+        df = df.copy()
+
+
 
     #-------------UTILS---------------------
     def _drop_unencodable(self, df):
