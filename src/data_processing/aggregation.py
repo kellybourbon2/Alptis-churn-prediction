@@ -30,7 +30,7 @@ def aggregate_reclamations(df_reclamations, ref_date):
 
     # Primary & secondary channel (mode)
     df_agg = df_agg.merge(
-        df_reclamations.groupby("client_code")["recla_canal_entrant"].agg(lambda x: x.value_counts().idxmax()).rename("recla_canal_entrant_principale"),
+        df_reclamations.groupby("client_code")["recla_canal_entrant"].agg(lambda x: x.value_counts().idxmax()).rename("recla_canal_entrant_principale").reset_index(),
         on="client_code", how="left"
     )
     
@@ -39,7 +39,7 @@ def aggregate_reclamations(df_reclamations, ref_date):
         return vc.index[1] if len(vc) > 1 else None
     
     df_agg = df_agg.merge(
-        df_reclamations.groupby("client_code")["recla_canal_entrant"].agg(get_second_mode).rename("recla_canal_entrant_secondaire"),
+        df_reclamations.groupby("client_code")["recla_canal_entrant"].agg(get_second_mode).rename("recla_canal_entrant_secondaire").reset_index(),
         on="client_code", how="left"
     )
 
@@ -115,38 +115,58 @@ def aggregate_interaction(df_interaction):
     df = df_interaction.copy()
 
     # Total interactions
-    df_agg = df.groupby("client_code").size().to_frame("interaction_nb_total")
+    df_agg = df.groupby("client_code").size().to_frame("interaction_nb_total").reset_index()
 
     # Top 7 motifs
     top7 = ["Frais courants", "Dentaire", "Hospitalisation", "Télétransmission", "Médecine douce", "Tiers payant", "Optique"]
     df["motif_simplifie"] = df["interaction_motif"].apply(lambda x: x if x in top7 else "interaction_motif_autre")
     
-    df_motif = df.groupby(["client_code", "motif_simplifie"]).size().unstack(fill_value=0)
-    df_motif.columns = [f"interaction_motif_{col.lower().replace(' ', '_').replace('é', 'e').replace('è', 'e')}" if col != "interaction_motif_autre" else col for col in df_motif.columns]
-    df_agg = df_agg.join(df_motif, how="left")
+    df_motif = df.groupby(["client_code", "motif_simplifie"]).size().unstack(fill_value=0).reset_index()
+    df_motif.columns.name = None
+    df_motif.columns = [
+        f"interaction_motif_{col.lower().replace(' ', '_').replace('é', 'e').replace('è', 'e')}"
+        if col not in ("client_code", "interaction_motif_autre") else col
+        for col in df_motif.columns
+    ]
+    df_agg = df_agg.merge(df_motif, on="client_code", how="left")
 
     # Top 3 services
     top3_services = ["Prestations santé", "Suivi du contrat", "Cotisations & Recouvrements"]
     df["service_simplifie"] = df["interaction_service"].apply(lambda x: x if x in top3_services else "interaction_autres_services")
     
-    df_service = df.groupby(["client_code", "service_simplifie"]).size().unstack(fill_value=0)
-    df_service.columns = [f"interaction_service_{col.lower().replace(' ', '_').replace('é', 'e')}" if col != "interaction_autres_services" else col for col in df_service.columns]
-    df_agg = df_agg.join(df_service, how="left")
+    df_service = df.groupby(["client_code", "service_simplifie"]).size().unstack(fill_value=0).reset_index()
+    df_service.columns.name = None
+    df_service.columns = [
+        f"interaction_service_{col.lower().replace(' ', '_').replace('é', 'e')}"
+        if col not in ("client_code", "interaction_autres_services") else col
+        for col in df_service.columns
+    ]
+    df_agg = df_agg.merge(df_service, on="client_code", how="left")
 
     # Telephone channel count
-    df_tel = df[df["interaction_canal"] == "Téléphone"].groupby("client_code").size().to_frame("interaction_canal_telephone_nb")
-    df_agg = df_agg.join(df_tel, how="left")
+    df_tel = (
+        df[df["interaction_canal"] == "Téléphone"]
+        .groupby("client_code").size()
+        .to_frame("interaction_canal_telephone_nb")
+        .reset_index()
+    )
+    df_agg = df_agg.merge(df_tel, on="client_code", how="left")
 
     # Transfers
     transfer_cols = ["interaction_est_transferee_service_reclamation", "interaction_est_transferee_service_gestion", 
                      "interaction_est_transferee_service_commercial", "interaction_est_externalisee"]
-    df_transfer = df.groupby("client_code")[transfer_cols].sum().rename(columns={
-        "interaction_est_transferee_service_reclamation": "interaction_nb_transferts_reclamation",
-        "interaction_est_transferee_service_gestion": "interaction_nb_transferts_gestion",
-        "interaction_est_transferee_service_commercial": "interaction_nb_transferts_commercial",
-        "interaction_est_externalisee": "interaction_nb_transferts_externalises"
-    })
-    df_agg = df_agg.join(df_transfer, how="left")
+    df_transfer = (
+        df.groupby("client_code")[transfer_cols]
+        .sum()
+        .rename(columns={
+            "interaction_est_transferee_service_reclamation": "interaction_nb_transferts_reclamation",
+            "interaction_est_transferee_service_gestion": "interaction_nb_transferts_gestion",
+            "interaction_est_transferee_service_commercial": "interaction_nb_transferts_commercial",
+            "interaction_est_externalisee": "interaction_nb_transferts_externalises"
+        })
+        .reset_index()
+    )
+    df_agg = df_agg.merge(df_transfer, on="client_code", how="left")
 
     # Email history
     df_mail = (
@@ -155,17 +175,18 @@ def aggregate_interaction(df_interaction):
         .apply(lambda x: dict(zip(x["interaction_date"], x["interaction_texte_mail"])) if not x.empty else {},
             include_groups=False)
         .to_frame("interaction_historique_mail")
+        .reset_index()
     )
-    df_agg = df_agg.join(df_mail, how="left")
+    df_agg = df_agg.merge(df_mail, on="client_code", how="left")
 
     # Fill NaN with 0 (except mail history)
     for col in df_agg.columns:
-        if col != "interaction_historique_mail":
+        if col not in ("client_code", "interaction_historique_mail"):
             df_agg[col] = df_agg[col].fillna(0).astype(int)
     df_agg["interaction_historique_mail"] = df_agg["interaction_historique_mail"].apply(
         lambda x: x if isinstance(x, dict) else {})
 
-    return df_agg.reset_index()
+    return df_agg
 
 
 def aggregate_impayes(df_impayes):
@@ -184,7 +205,13 @@ def aggregate_impayes(df_impayes):
     ).reset_index()
 
     # Action types pivot
-    df_types = df.groupby(["client_code", "impaye_type_action"]).size().unstack(fill_value=0)
+    df_types = (
+        df.groupby(["client_code", "impaye_type_action"])
+        .size()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+    df_types.columns.name = None
     mapping_actions = {
         "1er Impayé": "impaye_action_1er_impaye",
         "1ere lettre de relance": "impaye_action_1ere_lettre_relance",
@@ -196,5 +223,5 @@ def aggregate_impayes(df_impayes):
     }
     df_types.rename(columns=mapping_actions, inplace=True)
 
-    df_agg = df_agg.join(df_types, how="left")
+    df_agg = df_agg.merge(df_types, on="client_code", how="left")
     return df_agg.fillna(0)
