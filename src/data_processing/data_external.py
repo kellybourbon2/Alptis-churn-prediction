@@ -42,6 +42,13 @@ def add_revenu_insee(df, path_insee_commune, new_column_revenu_name= NEW_COLUMN_
     df_revenu.loc[mask, "Médiane du niveau de vie 2021"] = df_revenu.loc[mask, "_revenu_voisin"]
     df_revenu = df_revenu.drop(columns=["_cp_prefix", "_revenu_voisin"])
 
+    # STEP 3.5 : Deduplicate — keep one row per postal code (mean if multiple values)
+    df_revenu = (
+        df_revenu
+        .groupby("Code postal", as_index=False)["Médiane du niveau de vie 2021"]
+        .mean()
+    )
+
     # STEP 4 : Merger sur df
     df["client_code_postal"] = df["client_code_postal"].astype(str).str.zfill(5)
     df = (df
