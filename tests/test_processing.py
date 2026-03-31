@@ -239,9 +239,9 @@ class TestFinalDataset:
         """Final dataset should contain no NaN values"""
         nan_counts = df_ready.isna().sum()
         cols_with_nan = nan_counts[nan_counts > 0]
-        assert cols_with_nan.empty, \
-            f"Final dataset has NaN values in the following columns:\n{cols_with_nan}"
-
+        assert len(cols_with_nan) == 0, \
+        f"[{dataset_name}] NaN values in columns:\n{cols_with_nan}"
+    
 
 # ------------------------------------------------------------------
 # 5. Validation / Evaluation final dataset tests
