@@ -135,7 +135,7 @@ class DataProcessor:
         df_impayes       = aggregate_impayes(df_impayes)
         df_interactions  = aggregate_interaction(df_interactions)
 
-        # Step 3: Merge all on client_code
+        # Step 3: Merge all on key column (client_code)
         df = df_portefeuille.copy()
         for other_df in [df_reclamations, df_consommations, df_impayes, df_interactions]:
             df = df.merge(other_df, how="left", on= self.key_column)

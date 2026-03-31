@@ -22,3 +22,15 @@ __pycache__/
 #Perso HKA
 notes-dev.md
 perso_demo_random_forest.ipynb
+
+.python-version
+uv.lock
+*.lock
+*.egg-info/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+mlruns/
