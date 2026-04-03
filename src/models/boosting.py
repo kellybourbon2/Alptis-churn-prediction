@@ -1,6 +1,7 @@
 """
 Boosting models training
-Models   : XGBoost · LightGBM · HistGradientBoosting
+Models   : XGBoost - LightGBM - HistGradientBoosting
+Data processing: encoding, no normalisation
 MLOps    : MLflow tracking · Optuna HPO · SHAP explainability
 Imbalance: scale_pos_weight / class_weight / SMOTE (optional)
 
@@ -38,21 +39,13 @@ from lightgbm import LGBMClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 #try shap
-try:
-    import shap
-    SHAP_AVAILABLE = True
-except ImportError:
-    SHAP_AVAILABLE = False
-    print("⚠  shap not found — falling back to native feature_importances_.")
+
+import shap
+SHAP_AVAILABLE = True
 
 # Optional: imbalanced-learn SMOTE
-try:
-    from imblearn.over_sampling import SMOTE
-    from imblearn.pipeline import Pipeline as ImbPipeline
-    SMOTE_AVAILABLE = True
-except ImportError:
-    SMOTE_AVAILABLE = False
-    print("⚠  imbalanced-learn not installed — SMOTE disabled. pip install imbalanced-learn")
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
 
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -94,16 +87,15 @@ def compute_scale_pos_weight(y):
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
 def evaluate(model, X, y, prefix=""):
-    proba  = model.predict_proba(X)[:, 1]
-    pred   = model.predict(X)
+    proba = model.predict_proba(X)[:, 1]   
+    pred  = model.predict(X)
     return {
-        f"{prefix}roc_auc":  roc_auc_score(y, proba),
-        f"{prefix}pr_auc":   average_precision_score(y, proba),
-        f"{prefix}f1":       f1_score(y, pred),
+        f"{prefix}roc_auc":   roc_auc_score(y, proba),
+        f"{prefix}pr_auc":    average_precision_score(y, proba),
+        f"{prefix}f1":        f1_score(y, pred),
         f"{prefix}precision": precision_score(y, pred),
-        f"{prefix}recall": recall_score(y, pred)
+        f"{prefix}recall":    recall_score(y, pred),
     }
-
 
 def cv_score(estimator, X, y, cfg: Config, scoring="average_precision"):
     cv = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,
@@ -116,8 +108,8 @@ def get_model(name: str, params: dict, spw: float, random_state: int):
     """Return a bare (non-pipeline) estimator."""
     if name == "xgboost":
         return XGBClassifier(
-            **params,
-            scale_pos_weight=spw,
+            **params, 
+            #scale_pos_weight=spw
             use_label_encoder=False,
             eval_metric="aucpr",
             tree_method="hist",         # fast histogram
@@ -136,7 +128,7 @@ def get_model(name: str, params: dict, spw: float, random_state: int):
             verbose=-1,
             random_state=random_state,
             n_jobs=-1,
-            device= "gpu"
+            #device= "cuda"
         )
     elif name == "histgb":
         return HistGradientBoostingClassifier(
@@ -202,48 +194,37 @@ def run_optuna(model_name: str, X_train, y_train, spw: float, cfg: Config):
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 def build_pipeline(estimator, cfg: Config):
     steps = []   # no scaler
-    if cfg.use_smote and SMOTE_AVAILABLE:
-        steps.insert(0, ("smote", SMOTE(random_state=cfg.random_state)))
-        PipeClass = ImbPipeline
-    else:
-        PipeClass = Pipeline
+    steps.insert(0, ("smote", SMOTE(random_state=cfg.random_state)))
+    PipeClass = ImbPipeline
     steps.append(("model", estimator))
     return PipeClass(steps)
 
 
 # ── SHAP Explainability ───────────────────────────────────────────────────────
 def compute_shap(model_name: str, estimator, X_sample, cfg: Config):
-    if not SHAP_AVAILABLE:
-        # fallback to native importances
-        raw = estimator.named_steps["model"]
-        imp = raw.feature_importances_
-        top5 = np.argsort(imp)[::-1][:5]
-        feature_names = list(X_sample.columns) if hasattr(X_sample, "columns") else [str(i) for i in range(X_sample.shape[1])]
-        return {f"fi_top_feat_{i+1}": feature_names[top5[i]] for i in range(5)}
-    try:
-        raw = estimator.named_steps["model"]
-        explainer = shap.TreeExplainer(raw)
-        vals = explainer(X_sample)
-        mean_abs = np.abs(vals.values).mean(axis=0)
-        top5 = np.argsort(mean_abs)[::-1][:5]
-        feature_names = list(X_sample.columns) if hasattr(X_sample, "columns") else [str(i) for i in range(X_sample.shape[1])]
-        return {f"shap_top_feat_{i+1}": feature_names[top5[i]] for i in range(5)}
-    except Exception as e:
-        print(f"  SHAP skipped ({e})")
-        return {}
-
+    """Print top 20 shap values given model"""
+    raw = estimator.named_steps["model"]
+    explainer = shap.TreeExplainer(raw)
+    vals = explainer(X_sample)
+    mean_abs = np.abs(vals.values).mean(axis=0)
+    top5 = np.argsort(mean_abs)[::-1][:5]
+    feature_names = list(X_sample.columns) if hasattr(X_sample, "columns") else [str(i) for i in range(X_sample.shape[1])]
+    return {f"shap_top_feat_{i+1}": feature_names[top5[i]] for i in range(20)}
 
 # ── MLflow Run ────────────────────────────────────────────────────────────────
 def mlflow_run(model_name, best_params, best_cv, estimator, X_train, X_test, y_train, y_test,
                spw, cfg, elapsed):
+    """Save parameters, metrics computed on training and test datasets on mlflow 
+    (from best model selected by optuna)"""
+
     with mlflow.start_run(run_name=model_name):
         # Tags
         mlflow.set_tags({
             "model":    model_name,
-            "smote":    cfg.use_smote and SMOTE_AVAILABLE,
+            "smote":    cfg.use_smote,
         })
 
-        # Params
+        # Save Parameters of training 
         mlflow.log_params(best_params)
         mlflow.log_param("scale_pos_weight", round(spw, 3))
         mlflow.log_param("cv_folds", cfg.cv_folds)
@@ -270,8 +251,10 @@ def mlflow_run(model_name, best_params, best_cv, estimator, X_train, X_test, y_t
             mlflow.xgboost.log_model(estimator.named_steps["model"], "model")
         elif model_name == "lightgbm":
             mlflow.lightgbm.log_model(estimator.named_steps["model"], "model")
-        else:
-            mlflow.sklearn.log_model(estimator, "model")
+        elif model_name == "histgb":
+            mlflow.lightgbm.log_model(estimator.named_steps["model"], "model")
+        else: 
+            logging.warning("Error - model not defined")
 
         # Classification report
         pred  = estimator.predict(X_test)
@@ -300,21 +283,25 @@ def main():
 
     # 1.Load the data: with no normalisation but encoded
     train_processor = DataProcessor(mode="training")
-    df_train = train_processor.run(optional_normalisation=False)
-
+    df_train = train_processor.run(optional_encoding=True, optional_normalisation=False)
+    
     test_processor = DataProcessor(mode="validation")
+
+    #pass the arguments from training to test so no data-leakage
     test_processor.global_means = train_processor.global_means
     test_processor.target_encoding_maps = train_processor.target_encoding_maps
     test_processor.ordinal_maps         = train_processor.ordinal_maps
     test_processor.encoded_columns      = train_processor.encoded_columns
     test_processor.scaler               = train_processor.scaler
     test_processor.normalized_columns   = train_processor.normalized_columns
-    df_test = test_processor.run_transform(optional_normalisation=False)
+
+    #process test dataset with arguments computed on train
+    df_test = test_processor.run_transform(optional_encoding=True, optional_normalisation=False)
 
     X_train = df_train.drop(columns=[TARGET_COLUMN, KEY_COLUMN])
-    y_train = df_train[TARGET_COLUMN]
+    y_train = df_train[TARGET_COLUMN].values
     X_test  = df_test.drop(columns=[TARGET_COLUMN, KEY_COLUMN])
-    y_test  = df_test[TARGET_COLUMN]
+    y_test  = df_test[TARGET_COLUMN].values
 
     spw  = compute_scale_pos_weight(y_train) #Ratio: non_churners/churners
 
@@ -322,26 +309,26 @@ def main():
     mlflow.set_experiment(CFG.experiment_name)
 
     # 3. Models to train
-    models = ["xgboost", "lightgbm", "histgb"]
+    models = ["lightgbm", "histgb", "xgboost"]
     leaderboard = []
 
     for model_name in models:
         print(f"{model_name.upper()}")
 
-        # 3a. Optuna HPO
+        #  Optuna HPO: to compute better hyperparameters
         print(f"  Optuna HPO ({CFG.n_optuna_trials} trials) …")
         t0 = time.perf_counter()
         best_params, best_cv = run_optuna(model_name, X_train, y_train, spw, CFG)
         print(f"  Best CV {CFG.primary_metric}: {best_cv:.4f}")
 
-        # 3b. Retrain on full train set with best params
+        # Retrain the model with best hyperparameters on full training dataset
         est  = get_model(model_name, best_params, spw, CFG.random_state)
         pipe = build_pipeline(est, CFG)
         pipe.fit(X_train, y_train)
         elapsed = time.perf_counter() - t0
         print(f"  Training done in {elapsed:.1f}s")
 
-        # 3c. MLflow
+        # MLflow
         row = mlflow_run(
             model_name, best_params, best_cv, pipe,
             X_train, X_test, y_train, y_test, spw, CFG, elapsed
