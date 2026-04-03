@@ -47,7 +47,9 @@ REVENU_MEDIAN_FRANCE_2021 = 23160
 
 HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
-
+#to avoid discrepancies test-training because not same categories
+FIXED_CATEGORIES = {
+    "courtier_segmentation_interne": ['Alptis', 'VIP', 'Opportuniste', 'Petit Producteur', 'Sommeil', 'Groupements', 'Challenger', 'Dilemme', 'Nouveau', 'Inactif à relancer', 'VADISTE', 'Potentiel', 'Partenariats', 'CMA', 'Non catégorisé', 'Filiale', 'Miltis', 'Alptis', 'VIP', 'Potentiel', 'Opportuniste', 'Potentiel Agent', 'Sommeil', 'Groupements', 'Petit Producteur', 'Non catégorisé', 'Nouveau', 'VADISTE', 'Inactif à relancer', 'CMA', 'Dilemme', 'Filiale', 'Miltis', 'Partenariats'], } 
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
