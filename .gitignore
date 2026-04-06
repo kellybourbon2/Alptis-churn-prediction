@@ -3,6 +3,10 @@
 data\
 data/*
 
+#ignore version
+*=
+*=*.*
+
 #virtual environnements
 alptis_kb_env/
 .venv
