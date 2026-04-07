@@ -1,9 +1,11 @@
-"""Load raw data - supports both local files and S3 storage"""
+"""Load raw and processsed data - supports both local files and S3 storage for loading of raw files"""
 
 import os
 import pandas as pd
 from typing import Literal
 import sys
+import logging
+import s3fs
 
 # Add parent directories to path to import Config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -24,7 +26,6 @@ def _load_from_local(set: str, files: dict) -> dict:
 
 def _load_from_s3(set: str, files: dict) -> dict:
     """Load datasets from S3 storage"""
-    import s3fs
     
     # Set up S3 connection
     fs = s3fs.S3FileSystem(
@@ -79,10 +80,48 @@ def data_loading(set: Literal["training", "validation", "evaluation"]) -> tuple[
         data_frames["interactions"], 
         data_frames["impayes"])
 
-if __name__=="__main__":
-    dataset = "validation"
-    try: 
-        df= data_loading(dataset)
-        print(f"{dataset} dataset loaded with success")
-    except: 
-        raise Exception
+def load_data_processed_from_S3(dataset: str):
+    """
+    Load a processed dataset from S3 storage.
+    Args:
+        dataset: Name of the dataset to load.
+                 Expected values: 'X_train', 'X_test', 'y_train', 'y_test'.
+    Returns:
+        pd.DataFrame: The requested dataset.
+    """
+    # Set up S3 connection
+    fs = s3fs.S3FileSystem(
+        key=Config.S3_ACCESS_KEY,
+        secret=Config.S3_SECRET_KEY,
+        token=Config.S3_SESSION_TOKEN,
+        client_kwargs={'endpoint_url':'https://' + Config.S3_ENDPOINT}
+    ) 
+    s3_path = f"{Config.S3_DATA_PROCESSED_BUCKET}/{dataset}.parquet"
+    try:
+        with fs.open(s3_path, 'rb') as f:
+            file = pd.read_parquet(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found on S3: {s3_path}")
+    return file
+
+def save_data_processed_parquet_to_s3(df: pd.DataFrame, dataset: str) -> None:
+    """
+    Save a DataFrame as parquet to S3 storage.
+    Args:
+        df:      DataFrame to save.
+        dataset: Dataset name used as filename (e.g. 'X_train', 'y_test').
+    """
+    fs = s3fs.S3FileSystem(
+        key=Config.S3_ACCESS_KEY,
+        secret=Config.S3_SECRET_KEY,
+        token=Config.S3_SESSION_TOKEN,
+        client_kwargs={'endpoint_url': 'https://' + Config.S3_ENDPOINT}
+    )
+    s3_path = f"{Config.S3_DATA_PROCESSED_BUCKET}/{dataset}.parquet"
+    try:
+        with fs.open(s3_path, 'wb') as f:
+            df.to_parquet(f, index=False)
+        logging.info(f"{dataset} saved to S3: {s3_path}")
+    except Exception as e:
+        logging.error(f"Failed to save {dataset} to S3: {e}")
+        raise
