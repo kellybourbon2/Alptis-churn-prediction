@@ -49,7 +49,7 @@ HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
 #to avoid discrepancies test-training because not same categories
 FIXED_CATEGORIES = {
-    "courtier_segmentation_interne": ['Alptis', 'VIP', 'Opportuniste', 'Petit Producteur', 'Sommeil', 'Groupements', 'Challenger', 'Dilemme', 'Nouveau', 'Inactif à relancer', 'VADISTE', 'Potentiel', 'Partenariats', 'CMA', 'Non catégorisé', 'Filiale', 'Miltis', 'Alptis', 'VIP', 'Potentiel', 'Opportuniste', 'Potentiel Agent', 'Sommeil', 'Groupements', 'Petit Producteur', 'Non catégorisé', 'Nouveau', 'VADISTE', 'Inactif à relancer', 'CMA', 'Dilemme', 'Filiale', 'Miltis', 'Partenariats'], } 
+    "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], }
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
@@ -81,6 +81,7 @@ S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
 S3_BUCKET = os.getenv("AWS_BUCKET_NAME", "projet-bdc-data")
+S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "projet-bdc-processed-data") #where the data processed (validation/training) is saved after pre-processing then load by model
 S3_VERIFY_SSL = False
 
 #To load directly processed dataset (clean, aggregated and merged)
@@ -122,7 +123,3 @@ DATASET_MAPPING = {
     "evaluation": EVALUATION_FILES,
     "validation": VALIDATION_FILES,  
 }
-
-
-# Cols to be transformed with external data
-COLUMNS_EXTERNAL_TRANSFORM = ['client_cotisations_annualisees_n_moins2', 'client_cotisations_annualisees_n_moins1', 'client_cotisations_annualisees_n', 'client_cotisations_annualisees_n_plus1']

@@ -64,8 +64,8 @@ class DataProcessor:
         self.target_col               = TARGET_COLUMN
         self.high_cardinality         = HIGH_CARDINALITY
         self.except_high_cardinality  = EXCEPT_HIGH_CARDINALITY
-        self.fixed_categories         = FIXED_CATEGORIES  # ← {col: [categories]} for columns with fixed vocab
-        self.fixed_categories_fitted  = {}                # ← populated at fit time, reused at transform time
+        self.fixed_categories         = FIXED_CATEGORIES 
+        self.fixed_categories_fitted  = {}  #fit during training, reuse for evaluation/validation     
         self.files_to_drop            = tuple(FILES_TO_DROP)
         self.columns_to_drop          = list(COLUMNS_TO_DROP) + list(COLUMNS_TO_PROCESSED_WITH_NLP)
         self.cols_to_exclude_encoding = (
@@ -188,9 +188,8 @@ class DataProcessor:
     def data_encoding(self, df: pd.DataFrame) -> pd.DataFrame:
         """Fit + transform (call on train dataset only):
         Encode categorical columns not treated manually:
-        - Drop non-encodable (list/dict/timestamp) first to avoid select_dtypes crash
-        - Fixed-category one-hot for columns listed in FIXED_CATEGORIES config
-          (vocabulary locked at config time → identical columns on train and test)
+        - Drop non-encodable (list/dict/timestamp) first 
+        - Fixed-category one-hot for columns listed in FIXED_CATEGORIES, to avoid issues when not the same cat in training and test
         - One-hot for low cardinality (nunique <= high_cardinality, except for the variable in self.except_high_cardinality)
         - Target encoding for high cardinality (nunique > high_cardinality + variable in except_high_cardinality)
         - Ordinal encoding for variables with values that can be ordered
@@ -355,10 +354,10 @@ if __name__ == "__main__":
 
     # Reuse the same pre-processor fitted on training dataset
     # (so no data-leakage with target-encoding, normalization, ...)
-    test_processor.global_means             = train_processor.global_means            # save global target % to fill new values for target-encoded columns
+    test_processor.global_means             = train_processor.global_means          
     test_processor.target_encoding_maps     = train_processor.target_encoding_maps
     test_processor.ordinal_maps             = train_processor.ordinal_maps
-    test_processor.fixed_categories_fitted  = train_processor.fixed_categories_fitted  # ← fixed vocab locked at training time
+    test_processor.fixed_categories_fitted  = train_processor.fixed_categories_fitted  
     test_processor.encoded_columns          = train_processor.encoded_columns
     test_processor.scaler                   = train_processor.scaler
     test_processor.normalized_columns       = train_processor.normalized_columns

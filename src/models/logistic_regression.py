@@ -29,6 +29,7 @@ test_processor = DataProcessor(mode="validation")
 test_processor.global_means = train_processor.global_means
 test_processor.target_encoding_maps = train_processor.target_encoding_maps
 test_processor.ordinal_maps         = train_processor.ordinal_maps
+test_processor.fixed_categories_fitted  = train_processor.fixed_categories_fitted  
 test_processor.encoded_columns      = train_processor.encoded_columns
 test_processor.scaler               = train_processor.scaler
 test_processor.normalized_columns   = train_processor.normalized_columns
