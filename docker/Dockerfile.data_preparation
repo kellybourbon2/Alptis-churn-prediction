@@ -1,0 +1,20 @@
+FROM ubuntu:22.04
+
+# Install Python
+RUN apt-get -y update && \
+    apt-get install -y python3-pip curl
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin/:$PATH"
+
+#Set environnement
+WORKDIR /Alptis-churn-prediction
+COPY pyproject.toml .
+COPY uv.lock .  #so exact same version            
+RUN uv sync --frozen 
+
+COPY Config.py .
+
+#run data preparation script
+CMD ["python", "src/data_processing/prepare_data.py"]
