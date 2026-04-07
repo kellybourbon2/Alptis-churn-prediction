@@ -1,0 +1,87 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: ml-training-pipeline
+  namespace: alptis-churn-ml-pipeline #kubernetes space name
+
+spec:
+  entrypoint: pipeline             # main template to run
+
+  # Shared config for all steps
+  volumes:
+    - name: ml-secrets
+      secret:
+        secretName: ml-secrets     # kubernetes secret from .env
+
+  templates:
+
+  # ── Main DAG : Direct Acyclic Graph to optimize pipeline
+  - name: pipeline
+    dag:
+      tasks:
+
+        # Step 1 : data preparation (runs first, alone)
+        - name: prepare-data
+          template: prepare-data
+
+        # Step 2 : training in parallel (waits for step 1)
+        - name: train-xgboost
+          dependencies: [prepare-data]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_xgboost.py"
+
+        - name: train-lightgbm
+          dependencies: [prepare-data]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_lightgbm.py"
+
+        - name: train-histgb
+          dependencies: [prepare-data]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_histgb.py"
+
+  # ── Step templates ─────────────────────────────────────────────
+
+  # Data preparation container
+  - name: prepare-data
+    container:
+      image: your-registry/data-prep:latest
+      command: ["python", "src/data_processing/prepare_data.py"]
+      envFrom:
+        - secretRef:
+            name: ml-secrets       # injects all .env vars
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1"
+        limits:
+          memory: "4Gi"
+          cpu: "2"
+
+  # Generic training container (script passed as parameter)
+  - name: train
+    inputs:
+      parameters:
+        - name: script
+    container:
+      image: your-registry/training:latest
+      command: ["python", "{{inputs.parameters.script}}"]
+      envFrom:
+        - secretRef:
+            name: ml-secrets
+      resources:
+        requests:
+          memory: "4Gi"
+          cpu: "2"
+        limits:
+          memory: "8Gi"
+          cpu: "4"
