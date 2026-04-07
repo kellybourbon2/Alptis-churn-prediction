@@ -150,7 +150,7 @@ class DataProcessor:
         df = feature_engineering(df, ref_date=self.ref_date)
 
         # Step 5: Add external data
-        df = add_revenu_insee(df, path_insee_commune="data_external/revenu_median_communes.xlsx", new_column_revenu_name=NEW_COLUMN_REVENU_INSEE, revenu_median_fr=REVENU_MEDIAN_FRANCE_2021)
+        df = add_revenu_insee(df, new_column_revenu_name=NEW_COLUMN_REVENU_INSEE, revenu_median_fr=REVENU_MEDIAN_FRANCE_2021)
 
         # Step 6: Fill missing values by feature type
         self._fill_reclamations_na(df)
