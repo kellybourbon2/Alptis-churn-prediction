@@ -99,3 +99,22 @@ results = pd.DataFrame({
     "client_code":  df_ready["client_code"],  # depuis le même df
     "churn_predit": predictions
 })
+
+TO DO pour industrialiser l'entrainement: 
+- Script pour chargement/entrainement des données --> saving dans S3 (parquet) OK
+- Script MLFLOW pour chaque type de modele: connexion via S3 pour récupérer les parquets ?? OK
+- MLFLOW UI partagée pour qu'on puisse tous entrainés/track sur meme interface (cf tuto Mlflow) --> ?
+
+- Créer dockerfile pour training et data_prep (pour fonctionnement ArgoWorkflow)
+docker run --env-file .env your-registry/training:latest --> pour temporairement tester le dockerfile (sans ajout de .env dans le file)
+
+
+- ArgoWorkflow: automatise 1_prepare_data --> 2 tous les script de training --> ? 3 etxract best model --> 4/ clipping 0 sur date_debut_effet_garantie_mois
+
+- ArgoCD: pour que argoWorkflow tourne dès que changement git
+
+- Dataprocessing: 
+>ajouter variable quantitatives
+>ajouter fichier impayés voir si ca améliore
+
+
