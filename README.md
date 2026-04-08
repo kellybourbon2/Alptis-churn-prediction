@@ -107,7 +107,7 @@ TO DO pour industrialiser l'entrainement:
 - MLFLOW UI partagée pour qu'on puisse tous entrainer/track sur meme interface (cf tuto Mlflow https://mlflow.org/docs/latest/ml/tracking/tutorials/remote-server/) 
 
 - Créer dockerfile pour training et data_prep (pour fonctionnement ArgoWorkflow)
-docker run --env-file .env your-registry/training:latest --> pour temporairement tester le dockerfile (sans ajouter manuellement chaque variable de .env dans les secrets ArgoWorkflow)
+docker run --env-file .env --v /data --v /data_external:kbourbon/kellybrbn/bdc-alptis/data_preparation:latest --> pour temporairement tester l'image build de data_preparation par ex (car data/, /data_exernal et .env exclus du build )
 
 
 - ArgoWorkflow: automatise 1_prepare_data --> 2 tous les script de training --> ? 3 etxract best model --> 4/ clipping 0 sur date_debut_effet_garantie_mois
