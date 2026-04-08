@@ -2,16 +2,16 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   name: ml-training-pipeline
-  namespace: alptis-churn-ml-pipeline #kubernetes space name
+  namespace: bdc-alptis-churn-pipeline 
 
 spec:
-  entrypoint: pipeline             # main template to run
+  entrypoint: pipeline             
 
   # Shared config for all steps
   volumes:
-    - name: ml-secrets
+    - name: env-secrets
       secret:
-        secretName: ml-secrets     # kubernetes secret from .env
+        secretName: env-secrets     # kubernetes secret from .env (to update regularly with: kubectl create secret generic env-secrets --from-env-file=.env)
 
   templates:
 
@@ -19,7 +19,6 @@ spec:
   - name: pipeline
     dag:
       tasks:
-
         # Step 1 : data preparation (runs first, alone)
         - name: prepare-data
           template: prepare-data
@@ -54,11 +53,11 @@ spec:
   # Data preparation container
   - name: prepare-data
     container:
-      image: your-registry/data-prep:latest
-      command: ["python", "src/data_processing/prepare_data.py"]
+      image: kellybrbn/bdc-alptis:data_preparation
+      command: ["uv", "run", "python", "src/data_processing/prepare_data.py"]
       envFrom:
         - secretRef:
-            name: ml-secrets       # injects all .env vars
+            name: env-secrets       # injects all .env vars
       resources:
         requests:
           memory: "2Gi"
@@ -73,11 +72,11 @@ spec:
       parameters:
         - name: script
     container:
-      image: your-registry/training:latest
-      command: ["python", "{{inputs.parameters.script}}"]
+      image: kellybrbn/bdc-alptis:training
+      command: ["uv", "run", "python", "{{inputs.parameters.script}}"]
       envFrom:
         - secretRef:
-            name: ml-secrets
+            name: env-secrets
       resources:
         requests:
           memory: "4Gi"
