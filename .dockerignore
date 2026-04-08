@@ -1,0 +1,37 @@
+# Data
+data/
+data_external/
+
+# Artifacts & models
+artifacts/
+mlruns/
+
+# Virtual environments
+.venv/
+alptis_kb_env/
+
+# Secrets
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+.ruff_cache/
+.pytest_cache/
+
+# Package build
+*.egg-info/
+dist/
+build/
+
+# Version files
+.python-version
+
+# Personal notes
+notes-dev.md
+perso_demo_random_forest.ipynb
