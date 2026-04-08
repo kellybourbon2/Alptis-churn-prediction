@@ -106,16 +106,40 @@ TO DO pour industrialiser l'entrainement:
 
 - MLFLOW UI partagée pour qu'on puisse tous entrainer/track sur meme interface (cf tuto Mlflow https://mlflow.org/docs/latest/ml/tracking/tutorials/remote-server/) 
 
-- Créer dockerfile pour training et data_prep (pour fonctionnement ArgoWorkflow)
-docker run --env-file .env --v /data --v /data_external:kbourbon/kellybrbn/bdc-alptis/data_preparation:latest --> pour temporairement tester l'image build de data_preparation par ex (car data/, /data_exernal et .env exclus du build )
+- Créer dockerfile pour training et data_prep (pour fonctionnement ArgoWorkflow) et les tester OK
+tester le build des images (plus facile via vsc code) de chaque étape (data_prepartion/training):
+docker build -f docker/Dockerfile.data_preparation -t kellybrbn/bdc-alptis:data_preparation .
+docker build -f docker/Dockerfile.training -t kellybrbn/bdc-alptis:training .
+(same repertory dockerhub (public) but different tags)
 
+ --> pour temporairement tester l'image build de data_preparation par ex (car data/, /data_exernal et .env exclus du build, quand yaura Argoflow faudra trouver moyen de créer secrets ):
+ 
+docker run \
+  --env-file .env \
+  -v "C:/Users/kelly/BDC-Alptis/data:/data" \
+  -v "C:/Users/kelly/BDC-Alptis/data_external:/data_external" \
+  kellybrbn/bdc-alptis:data_preparation
 
-- ArgoWorkflow: automatise 1_prepare_data --> 2 tous les script de training --> ? 3 etxract best model --> 4/ clipping 0 sur date_debut_effet_garantie_mois
+pour train (on ajoute en commande un script particulier: ex ici train_xgboost)
+docker run   --env-file .env   kellybrbn/bdc-alptis:training   src/models/train_xgboost.py
 
-- ArgoCD: pour que argoWorkflow tourne dès que changement git
+!! work only if variables in .env are entered without the brackets locally  
+
+- ArgoWorkflow: automatise 1_prepare_data --> 2 tous les script de training --> ? 3 etxract best model --> 4/ clipping 0 sur date_debut_effet_garantie_mois/clipping sur annulation cancellation dans interaction_motif
+
+pour pouvoir run argoworkflow, passer le fichier .env en secrets au cluster kubernetes:
+```ini
+kubectl create secret generic env-secrets --from-env-file=.env
+```
+Puis tester le argo-workflow:
+```ini 
+argo submit workflow.yaml
+```
+
+- ArgoCD: pour que argoWorkflow s'update dès que branche main s'update (crée manifeste yaml)
 
 - Dataprocessing: 
->ajouter variable quantitatives
+>ajouter variable qualitatives
 >ajouter fichier impayés voir si ca améliore
 
 
