@@ -10,12 +10,11 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin/:$PATH"
 
 #Set environnement
-WORKDIR /Alptis-churn-prediction
 COPY pyproject.toml .
-COPY uv.lock .  #so exact same version of librairies           
+COPY uv.lock .          
 RUN uv sync --frozen 
 
 COPY Config.py .
 
 #run data preparation script
-CMD ["python"]
+CMD ["uv", "python"]
