@@ -43,3 +43,50 @@ __pycache__/
 *.pyo
 *.pyd
 mlruns/
+
+#data file
+*data/
+data\
+data/*
+data_external/
+
+#artifacts models
+artifacts/ 
+
+#ignore version
+*=
+*=*.*
+.pytest_cache
+
+
+#virtual environnements
+alptis_kb_env/
+.venv
+
+#secrets
+*.env
+.env
+
+#cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+/__pycache__
+*.ruff_cache
+
+#Perso HKA
+notes-dev.md
+perso_demo_random_forest.ipynb
+
+.python-version
+uv.lock
+*.lock
+*.egg-info/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+mlruns/
