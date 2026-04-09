@@ -22,7 +22,7 @@ COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commun
                     "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
-COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
+COLUMNS_TO_PROCESSED_WITH_NLP= ["client_nps_verbatim_n", "client_nps_verbatim_n_moins1"] # retrait 'interaction_historique_mail'
 
 
 #----FEATURES ENGINEERING----------------
@@ -50,6 +50,7 @@ EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot
 #to avoid discrepancies test-training because not same categories
 FIXED_CATEGORIES = {
     "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], }
+#NO_ACTION_HIGH_CARDINALITY = ["client_departement"] #No target encoding
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
