@@ -19,4 +19,4 @@ COPY src/ ./src/
 
 #generic entrypoint to adapt to each model then
 ENTRYPOINT ["uv", "run", "python"]  
-# + src/models/xgboost.py 
+# +src/models/xgboost.py 
