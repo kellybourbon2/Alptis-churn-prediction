@@ -1,29 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  name: ml-training-pipeline
-  namespace: bdc-alptis-churn-pipeline 
+  name: data-prep-training-pipeline
+  namespace: user-kbourbon
 
 spec:
-  entrypoint: pipeline             
+  entrypoint: pipeline
 
-  # Shared config for all steps
-  volumes:
-    - name: env-secrets
-      secret:
-        secretName: env-secrets     # secrets added to Vault
-
+  # ───────────────────────────── DAG ─────────────────────────────
   templates:
 
-  # ── Main DAG : Direct Acyclic Graph to optimize pipeline
   - name: pipeline
     dag:
       tasks:
-        # Step 1 : data preparation (runs first, alone)
+
         - name: prepare-data
           template: prepare-data
 
-        # Step 2 : training in parallel (waits for step 1)
         - name: train-xgboost
           dependencies: [prepare-data]
           template: train
@@ -48,16 +41,14 @@ spec:
               - name: script
                 value: "src/models/train_histgb.py"
 
-  # ── Step templates ─────────────────────────────────────────────
-
-  # Data preparation container
+  # ─────────────────────── DATA PREP ─────────────────────────────
   - name: prepare-data
     container:
       image: kellybrbn/bdc-alptis:data_preparation
-      command: ["uv", "run", "python", "src/data_processing/prepare_data.py"]
-      envFrom:
-        - secretRef:
-            name: env-secrets       # injects all .env vars
+      imagePullPolicy: Always
+      command: ["uv", "run", "python"]
+      args: ["src/data_processing/prepare_data.py"]
+
       resources:
         requests:
           memory: "2Gi"
@@ -66,17 +57,35 @@ spec:
           memory: "4Gi"
           cpu: "2"
 
-  # Generic training container (script passed as parameter)
+  # ─────────────────────── TRAINING TEMPLATE ─────────────────────
   - name: train
     inputs:
       parameters:
         - name: script
+
     container:
       image: kellybrbn/bdc-alptis:training
-      command: ["uv", "run", "python", "{{inputs.parameters.script}}"]
-      envFrom:
-        - secretRef:
-            name: env-secrets
+      imagePullPolicy: Always
+      command: ["uv", "run", "python"]
+      args: ["{{inputs.parameters.script}}"]
+
+      env:                                 # pass 's3-credentials' as secret to kubectl (look at README)
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: access-key
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: secret-key
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: session-token 
+
       resources:
         requests:
           memory: "4Gi"
