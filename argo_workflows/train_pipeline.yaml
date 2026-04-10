@@ -11,7 +11,7 @@ spec:
   volumes:
     - name: env-secrets
       secret:
-        secretName: env-secrets     # kubernetes secret from .env (to update regularly with: kubectl create secret generic env-secrets --from-env-file=.env)
+        secretName: env-secrets     # secrets added to Vault
 
   templates:
 
