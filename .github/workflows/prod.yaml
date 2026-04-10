@@ -23,7 +23,7 @@ jobs:
       - name: Build data prep image
         run: |
           docker build \
-            -f Dockerfile.data \
+            -f docker/Dockerfile.data_preparation \
             -t kellybrbn/bdc-alptis:data_preparation .
 
       - name: Push data prep image
@@ -47,7 +47,7 @@ jobs:
       - name: Build training image
         run: |
           docker build \
-            -f Dockerfile.training \
+            -f docker/Dockerfile.training \
             -t kellybrbn/bdc-alptis:training .
 
       - name: Push training image
