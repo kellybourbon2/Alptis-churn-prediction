@@ -81,7 +81,7 @@ S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
 S3_BUCKET = os.getenv("AWS_BUCKET_NAME", "projet-bdc-data")
-S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "/kbourbon/projet-bdc-alptis-g2") #where the data processed (validation/training) is saved after pre-processing 
+S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "projet-bdc-alptis-g2") #where the data processed (validation/training) is saved after pre-processing 
 S3_VERIFY_SSL = False
 
 
