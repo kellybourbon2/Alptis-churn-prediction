@@ -91,10 +91,11 @@ def load_data_processed_from_S3(dataset: str):
     """
     # Set up S3 connection
     fs = s3fs.S3FileSystem(
+        endpoint_url='https://' + Config.S3_ENDPOINT,
         key=Config.S3_ACCESS_KEY,
         secret=Config.S3_SECRET_KEY,
         token=Config.S3_SESSION_TOKEN,
-        client_kwargs={'endpoint_url':'https://' + Config.S3_ENDPOINT}
+        client_kwargs={'verify': Config.S3_VERIFY_SSL}
     ) 
     s3_path = f"{Config.S3_DATA_PROCESSED_BUCKET}/{dataset}.parquet"
     try:
@@ -112,10 +113,11 @@ def save_data_processed_parquet_to_s3(df: pd.DataFrame, dataset: str) -> None:
         dataset: Dataset name used as filename (e.g. 'X_train', 'y_test').
     """
     fs = s3fs.S3FileSystem(
+        endpoint_url='https://' + Config.S3_ENDPOINT,
         key=Config.S3_ACCESS_KEY,
         secret=Config.S3_SECRET_KEY,
         token=Config.S3_SESSION_TOKEN,
-        client_kwargs={'endpoint_url': 'https://' + Config.S3_ENDPOINT}
+        client_kwargs={'verify': Config.S3_VERIFY_SSL}
     )
     s3_path = f"{Config.S3_DATA_PROCESSED_BUCKET}/{dataset}.parquet"
     try:
