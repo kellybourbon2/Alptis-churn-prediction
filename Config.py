@@ -76,7 +76,7 @@ DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 # S3 config
-S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "")
+S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "minio-simple.lab.groupe-genes.fr")
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
