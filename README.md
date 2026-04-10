@@ -112,10 +112,8 @@ Impaye
 Variables crées sur les mail
 
 >Analyse quantitative:
-analyser les mails (BERT TOpics) et les topics qui reviennet le +
-analyser les avis nps (<3 ou avis nps des clients ayant résiliés) avec BERT Topic
-
-
+identifier les mails des clients ayant annulés la résiliation
+identifier thèmes qui reviennent le plus dans motif Résiliation
 
 --> **ATTENTION: QUAND CREE FONCTION FIT, VIRER CLIENT_CODE (Variable KEY_COLUMN dans Config)**
 --> SINON RISQUE DOVERFIT SUR CA (On peut pas la drop au moment du data processing sinon perd info quand fait prédiction)

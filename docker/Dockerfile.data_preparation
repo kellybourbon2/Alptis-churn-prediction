@@ -16,5 +16,5 @@ RUN uv sync --frozen
 COPY Config.py .
 COPY src/ ./src/ 
 
-#run data preparation script (based on uv)
+#run data preparation script  (based on uv) 
 CMD ["uv", "run", "python", "src/data_processing/prepare_data.py"]
