@@ -14,7 +14,7 @@ COPY uv.lock .
 RUN uv sync --frozen 
 
 #Export external data (temporary, later : put on Onyxia)
-COPY data_external\revenu_median_communes.csv .
+COPY data_external/revenu_median_communes.csv .
 
 COPY Config.py .
 COPY src/ ./src/ 
