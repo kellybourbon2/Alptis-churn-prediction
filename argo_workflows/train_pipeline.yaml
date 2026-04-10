@@ -2,18 +2,17 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   name: data-prep-training-pipeline
-  namespace: user-kbourbon
+  namespace: argo
 
 spec:
+  parallelism: 5
   entrypoint: pipeline
 
-  # ───────────────────────────── DAG ─────────────────────────────
   templates:
 
   - name: pipeline
     dag:
       tasks:
-
         - name: prepare-data
           template: prepare-data
 
@@ -48,6 +47,25 @@ spec:
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
       args: ["src/data_processing/prepare_data.py"]
+      env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: env-secrets
+              key: AWS_ACCESS_KEY_ID
+
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: env-secrets
+              key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: env-secrets
+              key: AWS_SESSION_TOKEN
+        - name: AWS_S3_ENDPOINT
+          value: "minio-simple.lab.groupe-genes.fr"
 
       resources:
         requests:
@@ -62,34 +80,33 @@ spec:
     inputs:
       parameters:
         - name: script
-
     container:
       image: kellybrbn/bdc-alptis:training
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
       args: ["{{inputs.parameters.script}}"]
-
-      env:                                 # pass 's3-credentials' as secret to kubectl (look at README)
+      env:
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: s3-credentials
-              key: access-key
+              name: env-secrets
+              key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: s3-credentials
-              key: secret-key
+              name: env-secrets
+              key: AWS_SECRET_ACCESS_KEY
         - name: AWS_SESSION_TOKEN
           valueFrom:
             secretKeyRef:
-              name: s3-credentials
-              key: session-token 
-
+              name: env-secrets
+              key: AWS_SESSION_TOKEN
+        - name: AWS_S3_ENDPOINT
+          value: "minio-simple.lab.groupe-genes.fr"
       resources:
         requests:
-          memory: "4Gi"
-          cpu: "2"
+          memory: "1Gi"
+          cpu: "500m"
         limits:
-          memory: "8Gi"
-          cpu: "4"
+          memory: "2Gi"
+          cpu: "1"
