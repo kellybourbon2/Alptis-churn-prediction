@@ -71,14 +71,43 @@ We've tested different models of training
 
 ## To create an Argo-workflow locally
 
-Share the variable of S3 storage to kubectl, as a secret: 
-Share the variable of S3 storage stored in `.env` file to kubectl, as a secret: 
+1. Create the namespace kubernetes, for example called "argo"
 ```ini
-kubectl create secret generic env-secrets --from-env-file=.env
- -n  your-namespace
+kubectl create namespace argo
 ```
-...or see how to setup kubernetes to S3 storage on Onyxia when available (Account > Onyxia)
 
+2. Install argoworkflow on the created namespace: 
+```ini
+kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.7.12/install.yaml
+```
+
+3. Share the variables from `.env` file to the namespace kubectl created, as a secret: 
+```ini
+kubectl create secret generic env-secrets --from-env-file=.env -n argo
+```
+4. Create the argo-workflow (from the file `argo_workflows/train_pipeline`) on the namespace:
+```ini
+kubectl create -f argo_workflows/train_pipeline.yaml -n argo
+```
+5. Log to argo-workflow ui in another terminal bash (disable authentification then display on port 2467):
+First desactivate authentification:
+```ini
+kubectl patch deployment argo-server -n argo \
+  --type='json' \
+  -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["server","--auth-mode=server"]}]'
+```
+Then print on port 2746:
+```ini
+while true; do kubectl port-forward svc/argo-server -n argo 2746:2746 2>/dev/null; sleep 1; done
+```
+open:
+https://localhost to see Argoworkflow UI
+
+
+...or see how to setup kubernetes to S3 storage on Onyxia when available (Account > Onyxia)
+Install argoworkflow on namespace:
+
+kubectl apply -n test_namespace -f https://github.com/argoproj/argo-workflows/releases/latest/download/install.yaml
 >  Make sure to change your-namespace with the name you gave to the kubectl space you've created.
 > Find credentials for access-key and secret-key in your SSPCloud account under **My Account → Storage**
 
