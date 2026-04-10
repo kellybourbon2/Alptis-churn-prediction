@@ -48,9 +48,9 @@ Create a `.env` file at the root of the project with the following variables:
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_SESSION_TOKEN=...
-AWS_S3_ENDPOINT='minio-simple.lab.groupe-genes.fr'
-AWS_DEFAULT_REGION= 'us-east-1'
-AWS_BUCKET_NAME='projet-bdc-data'
+AWS_S3_ENDPOINT=minio-simple.lab.groupe-genes.fr
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET_NAME=projet-bdc-data
 ```
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
 
@@ -65,6 +65,7 @@ Located in `src/data_processing/`, the preprocessing module handles data cleanin
 - **`aggregation.py`**: Aggregates secondary files (reclamations, consumptions, interactions, overdue payments) at the client level
 - **`feature_engineering.py`**: Handles the creation of the new variables (courtier_anciennete_categories, client_age_categories, ...)
 - **`data_external.py`**: Handles the integration of external variables (revenue of commune in 2021 from Insee, ...)
+- **prepare_data.py**: Pipeline script that handles the data processsing, the train/test datasets preparation and the saving of the pre-processed datasets in S3 Storage (same as the one from Data Loading). The bucket for the storing in S3 can be changes with the variable `S3_DATA_PROCESSED_BUCKET` in `Config`.
 
 #### Demo (only for dev - to delete later)
 Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
