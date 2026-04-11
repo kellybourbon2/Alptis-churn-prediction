@@ -11,7 +11,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 
 #Set environnement
 COPY pyproject.data_prep.toml .
-COPY uv.lock .             
+COPY uv.data_prep.lock .             
 RUN uv sync --frozen 
 
 #Export external data (temporary, later : put on Onyxia)
