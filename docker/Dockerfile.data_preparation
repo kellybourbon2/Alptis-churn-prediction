@@ -1,24 +1,17 @@
-#Dockerfile for data preparation with encoding
 FROM python:3.13-slim  
 
-# Install curl pour uv
 RUN apt-get update && apt-get install -y curl --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin/:$PATH"
 
-#Set environnement
-COPY pyproject.data_prep.toml .
-COPY uv.data_prep.lock .             
+COPY pyproject.data_prep.toml pyproject.toml
+COPY uv.data_prep.lock uv.lock
 RUN uv sync --frozen 
 
-#Export external data (temporary, later : put on Onyxia)
 COPY data_external/ ./data_external/ 
-
 COPY Config.py .
 COPY src/ ./src/ 
 
-#run data preparation script  (based on uv) 
 CMD ["uv", "run", "python", "src/data_processing/prepare_data.py"]
