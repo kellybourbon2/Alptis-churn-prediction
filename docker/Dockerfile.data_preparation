@@ -1,9 +1,9 @@
 #Dockerfile for data preparation with encoding
 FROM python:3.13-slim  
 
-# Install Python
-RUN apt-get -y update && \
-    apt-get install -y python3-pip curl
+# Install curl pour uv
+RUN apt-get update && apt-get install -y curl --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
