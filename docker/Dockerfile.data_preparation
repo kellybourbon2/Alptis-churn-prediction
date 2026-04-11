@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+#Dockerfile for data preparation with encoding
+FROM python:3.13-slim  
 
 # Install Python
 RUN apt-get -y update && \
@@ -9,7 +10,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin/:$PATH"
 
 #Set environnement
-COPY pyproject.toml .
+COPY pyproject.data_prep.toml .
 COPY uv.lock .             
 RUN uv sync --frozen 
 

@@ -1,5 +1,5 @@
 #Dockerfile for model training (the same for all the models trained)
-FROM ubuntu:22.04
+FROM python:3.13-slim  
 
 # Install Python
 RUN apt-get -y update && \
