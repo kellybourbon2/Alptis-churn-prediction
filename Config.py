@@ -76,12 +76,12 @@ DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 # S3 config
-S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "minio-simple.lab.groupe-genes.fr")
+S3_ENDPOINT = "minio-simple.lab.groupe-genes.fr"
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
-S3_BUCKET = os.getenv("AWS_BUCKET_NAME", "projet-bdc-data")
-S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "projet-bdc-alptis-g2") #where the data processed (validation/training) is saved after pre-processing 
+S3_BUCKET = "projet-bdc-data"
+S3_DATA_PROCESSED_BUCKET= "projet-bdc-alptis-g2" #where the data processed (validation/training) is saved after pre-processing 
 S3_VERIFY_SSL = False
 
 
