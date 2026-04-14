@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2])) #so config and externa
 import pandas as pd
 from Config import REVENU_MEDIAN_FRANCE_2021, NEW_COLUMN_REVENU_INSEE
 
-def add_revenu_insee(df, path_insee_commune="data_external/revenu_median_communes.csv", new_column_revenu_name= NEW_COLUMN_REVENU_INSEE, revenu_median_fr= REVENU_MEDIAN_FRANCE_2021):
+def add_revenu_insee(df, path_insee_commune="../data_external/revenu_median_communes.csv", new_column_revenu_name= NEW_COLUMN_REVENU_INSEE, revenu_median_fr= REVENU_MEDIAN_FRANCE_2021):
     """Function that takes the merged DataFrame and add the column of median communal revenue
          from Insee, by merging it on the "client_code_postal"
         Args: 
