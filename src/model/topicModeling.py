@@ -1,12 +1,65 @@
 import re
 import numpy as np
 import pandas as pd
+import spacy
+import unicodedata
 
 from sentence_transformers import SentenceTransformer
 from bertopic import BERTopic
 from umap import UMAP
 from hdbscan import HDBSCAN
 from sklearn.feature_extraction.text import CountVectorizer
+
+
+nlp = spacy.load("fr_core_news_md")
+
+EMAIL_NOISE_PATTERNS = [
+    # placeholders / balises techniques
+    r"\bflag_[a-zA-Z0-9_]+\b",
+    r"\bxx(?:pj\d*|obj|cont)\b",
+    
+    # formules de politesse / ouverture / clôture
+    r"\bbonjour\b",
+    r"\bbonsoir\b",
+    r"\bcordialement\b",
+    r"\bbien cordialement\b",
+    r"\bmerci d['’]avance\b",
+    r"\bje vous remercie\b",
+    r"\bà votre disposition\b",
+    
+    # mentions pièces jointes / messagerie
+    r"\bpi[eè]ce(?:s)? jointe(?:s)?\b",
+    r"\bvoir pi[eè]ce(?:s)? jointe(?:s)?\b",
+    r"\bci[- ]jointe(?:s)?\b",
+    r"\bmessagerie [ée]lectronique\b",
+    
+    # entêtes / transferts / réponses
+    r"\bobjet\s*:",
+    r"\bde\s*:",
+    r"\benvoy[ée] le\s*:",
+    r"\bdate\s*:",
+    r"\bfrom\s*:",
+    r"\bto\s*:",
+    r"\bsubject\s*:",
+    r"\bre\s*:",
+    r"\btr\s*:",
+    r"\bfwd\s*:",
+    
+    # urls / mails
+    r"https?://\S+",
+    r"\b\S+@\S+\.\S+\b",
+    
+    # références automatiques
+    r"\bref\s*:\s*[_a-zA-Z0-9\.-]+\b",
+]
+
+CUSTOM_STOPWORDS = {
+    "bonjour", "bonsoir", "cordialement", "merci", "avance",
+    "piece", "jointe", "pieces", "jointes",
+    "messagerie", "electronique",
+    "objet", "date", "envoyer", "envoyé", "envoyee",
+    "re", "tr", "fwd", "message", "from", "android", "outlook"
+}
 
 
 class EmailBERTopicNoLeakagePipeline:
@@ -21,8 +74,8 @@ class EmailBERTopicNoLeakagePipeline:
     def __init__(
         self,
         embedding_model_name="paraphrase-multilingual-MiniLM-L12-v2",
-        n_neighbors=15,
-        n_components=5,
+        n_neighbors=20,
+        n_components=8,
         min_dist=0.0,
         min_cluster_size=30,
         min_samples=10,
@@ -65,6 +118,59 @@ class EmailBERTopicNoLeakagePipeline:
         self.is_fitted = False
         self.seen_topic_ids_ = None
 
+    def run(
+        self,
+        df_train: pd.DataFrame,
+        client_col: str = "client_code",
+        date_col: str = "interaction_date",
+        text_col: str = "objet_contenu",
+        target_col: str = None,
+        client_level_agg: dict = None
+    ) -> pd.DataFrame:
+        """
+        Pipeline TRAIN :
+        - fit BERTopic sur les emails du train
+        - construit les features topics au niveau client
+        - agrège les autres variables au niveau client
+        - retourne un dataset final client-level
+        """
+        return self.build_dataset_split(
+            df_split=df_train,
+            email_mode="fit",
+            client_col=client_col,
+            date_col=date_col,
+            text_col=text_col,
+            target_col=target_col,
+            client_level_agg=client_level_agg
+        )
+
+    def run_transform(
+        self,
+        df_new: pd.DataFrame,
+        client_col: str = "client_code",
+        date_col: str = "interaction_date",
+        text_col: str = "objet_contenu",
+        target_col: str = None,
+        client_level_agg: dict = None
+    ) -> pd.DataFrame:
+        """
+        Pipeline VALID/TEST :
+        - transforme avec le BERTopic appris sur le train
+        - construit les features topics au niveau client
+        - agrège les autres variables au niveau client
+        - retourne un dataset final client-level
+        """
+        return self.build_dataset_split(
+            df_split=df_new,
+            email_mode="transform",
+            client_col=client_col,
+            date_col=date_col,
+            text_col=text_col,
+            target_col=target_col,
+            client_level_agg=client_level_agg
+        )
+
+
     @staticmethod
     def clean_text(text: str) -> str:
         if pd.isna(text):
@@ -76,6 +182,77 @@ class EmailBERTopicNoLeakagePipeline:
         text = re.sub(r"[\r\n\t]+", " ", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
+# --------------------
+    @staticmethod
+    def strip_accents(text: str) -> str:
+        text = unicodedata.normalize("NFKD", text)
+        return "".join(c for c in text if not unicodedata.combining(c))
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        if not isinstance(text, str):
+            return ""
+        text = text.replace("\r", " ").replace("\n", " ")
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    @staticmethod
+    def remove_noise_patterns(text: str) -> str:
+        text = EmailBERTopicNoLeakagePipeline.normalize_text(text)
+        for pattern in EMAIL_NOISE_PATTERNS:
+            text = re.sub(pattern, " ", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    @staticmethod
+    def clean_french_email_tokens(
+        text: str,
+        keep_negation: bool = True,
+        min_token_len: int = 2
+    ) -> str:
+        text = EmailBERTopicNoLeakagePipeline.remove_noise_patterns(text)
+        if not text:
+            return ""
+        
+        doc = nlp(text)
+        cleaned_tokens = []
+        
+        negation_words = {"ne", "pas", "plus", "jamais", "aucun", "rien"}
+        
+        for token in doc:
+            if token.is_space or token.is_punct:
+                continue
+            
+            lemma = token.lemma_.lower().strip()
+            surface = token.text.lower().strip()
+            
+            # fallback si lemma absent ou bizarre
+            if not lemma or lemma == "-pron-":
+                lemma = surface
+            
+            lemma_no_acc = EmailBERTopicNoLeakagePipeline.strip_accents(lemma)
+            
+            # garder la négation si souhaité
+            if keep_negation and lemma_no_acc in negation_words:
+                cleaned_tokens.append(lemma_no_acc)
+                continue
+            
+            # stopwords généraux spaCy + stopwords métier/email
+            if token.is_stop:
+                continue
+            if lemma_no_acc in CUSTOM_STOPWORDS:
+                continue
+            
+            # filtrage tokens parasites
+            if re.fullmatch(r"[_\W\d]+", lemma_no_acc):
+                continue
+            if len(lemma_no_acc) < min_token_len:
+                continue
+            
+            cleaned_tokens.append(lemma_no_acc)
+        
+        return " ".join(cleaned_tokens)
+# --------------------
 
     @staticmethod
     def has_email_content(text: str, min_chars: int = 5) -> bool:
@@ -99,12 +276,17 @@ class EmailBERTopicNoLeakagePipeline:
         work = work.reset_index(drop=False).rename(columns={"index": "row_id"})
         work["has_email"] = work[text_col].apply(self.has_email_content)
         work["text_clean"] = work[text_col].apply(self.clean_text)
+
         work[date_col] = pd.to_datetime(work[date_col], errors="coerce")
 
         email_rows = work[
             (work["has_email"]) &
             (work["text_clean"].str.len() > 0)
         ].copy()
+
+        print('entame du cleaning complet avec les regex et spacy')
+        email_rows["text_clean"] = [self.clean_french_email_tokens(t) if isinstance(t, str) else "" for t in email_rows["text_clean"]]
+        print('Fin du cleaning complet avec les regex et spacy')
 
         return email_rows
 
