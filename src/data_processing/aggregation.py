@@ -199,25 +199,14 @@ def aggregate_interaction(df_interaction):
     )
     df_agg = df_agg.merge(df_transfer, on="client_code", how="left")
 
-    # --- Email history ---
-    df_mail = (
-        df[df["interaction_canal"] == "E-mail"]
-        .groupby("client_code")[["interaction_date", "interaction_texte_mail"]]
-        .apply(
-            lambda x: dict(zip(x["interaction_date"], x["interaction_texte_mail"])) if not x.empty else {},
-            include_groups=False
-        )
-        .to_frame("interaction_historique_mail")
-        .reset_index()
-    )
-    df_agg = df_agg.merge(df_mail, on="client_code", how="left")
+    # Creation of duration variable on interaction_date: "derniere_interaction_date"
+    df_date = df.groupby("client_code")["interaction_date"].max().reset_index()
+    df_date.rename(columns={"interaction_date":"derniere_interaction_date"}, inplace=True)
+    df_agg = df_agg.merge(df_date, on="client_code", how="left")
 
-    # --- Fill NaN (except mail history) ---
-    non_mail_cols = [c for c in df_agg.columns if c not in ("client_code", "interaction_historique_mail")]
+    # --- Fill NaN with zero -  except last interaction_date  ---
+    non_mail_cols = [c for c in df_agg.columns if c not in ("client_code", "derniere_interaction_date")]
     df_agg[non_mail_cols] = df_agg[non_mail_cols].fillna(0).astype(int)
-    df_agg["interaction_historique_mail"] = df_agg["interaction_historique_mail"].apply(
-        lambda x: x if isinstance(x, dict) else {}
-    )
 
     return df_agg
 

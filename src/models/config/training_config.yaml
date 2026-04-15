@@ -1,7 +1,7 @@
 training:
   random_state: 42 #change the seed to have new random exp
-  cv_folds: 2
-  n_optuna_trials: 1
+  cv_folds: 20
+  n_optuna_trials: 5
   use_smote: false
   primary_metric: "pr_auc"
   output_dir: "artifacts"

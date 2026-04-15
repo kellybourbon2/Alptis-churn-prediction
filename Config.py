@@ -32,7 +32,7 @@ REFERENCE_DATES = {
 
 FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
-                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
 COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
@@ -72,7 +72,7 @@ COLUMNS_ORDINAL = {
 
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
 TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
-TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation"]
+TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation", "derniere_interaction_date"]
 
 #----------ENVIRONNEMENT SETTING--------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
