@@ -1,0 +1,65 @@
+training:
+  random_state: 42 #change the seed to have new random exp
+  cv_folds: 2
+  n_optuna_trials: 1
+  use_smote: false
+  primary_metric: "pr_auc"
+  output_dir: "artifacts"
+  shap_sample_size: 200        
+  early_stopping: true         #add to code as condition
+  n_iter_no_change: 20        #for histgbm
+  early_stopping_round: 50   #for Catboost, Xgboost
+  device : "cuda"
+  task_type : "GPU" #for Catboost
+  scale_pos_weight : 8.175 # (nbr of y=0 samples) / (# nbr of y=1 samples) in training set
+  verbose: 0
+
+models:
+  logistic_regression:
+    data_suffix: "enc_norm"
+    class_weight: "balanced"
+    C_min: 0.0001
+    C_max: 100
+
+  random_forest:
+    data_suffix: "enc_nonorm"
+    class_weight: "balanced"
+
+  xgboost:
+    data_suffix: "enc_nonorm"
+    eval_metric: "aucpr"
+    tree_method: "hist"
+
+  catboost:
+    data_suffix: "noenc_nonorm"
+
+    eval_metric: "AUC"
+    lossfunction: "Logloss"
+    use_best_model: True
+    od_type: "Iter"
+    auto_class_weights: "Balanced"
+
+  lightgbm:
+    data_suffix: "enc_nonorm"
+
+  histgb:
+    data_suffix: "enc_nonorm"
+
+optuna:
+  max_iter_min: 200            # currently hardcoded in SEARCH_SPACE
+  max_iter_max: 800
+  max_depth_min: 3
+  max_depth_max: 10
+  lr_min: 0.01
+  lr_max: 0.3
+  max_leaf_nodes_min: 15
+  max_leaf_nodes_max: 255
+  min_samples_leaf_min: 5
+  min_samples_leaf_max: 50
+  l2_reg_min: 0.0001
+  l2_reg_max: 10
+  hyperband_min_resource: 50
+  hyperband_max_resource: 400
+  hyperband_reduction_factor: 3
+  logreg_max_iter: 500
+  logreg_tol: 0.001
