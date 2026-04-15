@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y curl --no-install-recommends && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin/:$PATH"
 
-COPY pyproject.toml
-COPY uv.lock
+COPY pyproject.toml .
+COPY uv.lock .
 RUN uv sync --frozen 
 
 COPY data_external/ ./data_external/ 
