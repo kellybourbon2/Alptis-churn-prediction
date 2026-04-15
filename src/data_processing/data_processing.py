@@ -348,11 +348,11 @@ class DataProcessor:
         df[conso_cols] = df[conso_cols].fillna(0)
 
     def _fill_interactions_na(self, df: pd.DataFrame, optional_fill_missing_values: bool) -> None:
-        inter_cols = [c for c in df.columns if c.startswith("interaction") and c not in ["last_interaction_date_mois"]]
+        inter_cols = [c for c in df.columns if c.startswith("interaction") and c not in ["derniere_interaction_date_mois"]]
         df[inter_cols] = df[inter_cols].fillna(0)
 
         if optional_fill_missing_values:
-            df["last_interaction_date_mois"] = df["last_interaction_date_mois"].fillna(-1) #optional because date of non happening event 
+            df["derniere_interaction_date_mois"] = df["derniere_interaction_date_mois"].fillna(-1) #optional because date of non happening event 
 
     def _fill_impaye_na(self, df: pd.DataFrame , optional_fill_missing_values: bool) -> None:
         impaye_cols = [c for c in df.columns if c.startswith("impaye")]

@@ -102,14 +102,18 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 - Créer les variables quantitatives sur analyses textuelles
 -Créer la variable pour le clipping client_effet_garantie_mois < 11.5
 
+
+FINIR ARGOWORKFLOW pour entrainement modeles
 - Trouver un moyen de passer des secrets à kubernetes pour run argoworkflow --> via Vault ???
---> contacter le prof
+--> cf réponse prof
+- réécrire script data preparation: en faisant attention a option fill missing values
+- Check si yaml ok selon les specificités de chaque modele
 
 - modif src/model/config: 
 si le temps, ajouter les variables max/min de chaque search_space dans un partie optuna propre a chaque modele
 - tester les script de chaque modele: xgboost ok, tester log_reg, catboost, lightgbm, histgb et random forest 
 
-- creer github workflow pour updater les X_train/Y_train/... du bucket S3 automatiquement à chaque modif du dossier data_processing (ie workflow qui run chacun des prepare_data...)
+- creer github workflow action pour updater les X_train/Y_train/... du bucket S3 automatiquement à chaque modif du dossier data_processing (ie workflow qui run chacun des prepare_data...)
 
 >Puis créer argoworkflow qui regroupe modeles avec meme data processing 
 ISSUE: ARGOWORKFLOW fonctionne que sur SSPCLOUD pas GENES
