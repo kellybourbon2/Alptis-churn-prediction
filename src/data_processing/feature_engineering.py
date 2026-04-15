@@ -64,8 +64,8 @@ def feature_engineering(
         df.drop(columns=col, inplace=True) #drop old columns
     
     #5- Creation of client_cotisation_rate_n_nplus_1
-    df["client_cotisations_annualisees_rate_n_plus1_n"]= df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"]
-    df["client_cotisations_annualisees_rate_n_n_moins1"]= df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"]
+    df["client_cotisations_evolution_rate_n_plus1_n"]= df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"]
+    df["client_cotisations_evolution_rate_n_n_moins1"]= df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"]
 
     return df
     
