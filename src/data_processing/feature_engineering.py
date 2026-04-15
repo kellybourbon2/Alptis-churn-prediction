@@ -37,20 +37,17 @@ def feature_engineering(
     Returns:
       DataFrame: merged dataframe with new features created
     """
-    #---- variables from portefeuille ------------
-
-    # Creation of a categorical variables 
+    #1- Creation of a categorical variables on age and anciennete 
     df["age_categories"] = pd.cut(df[age_column], bins=age_bins, labels=age_labels)
     df["courtier_anciennete_categories"] = pd.cut(df[anciennete_courtier_column], bins= anciennete_bins, labels=anciennete_labels)
 
-    #-------variable from consommations---------
 
-    #Create "dernier_paiement_consommation": latest date de consommation enregistrée dans le fichier consommation
+    #2- Create "dernier_paiement_consommation": latest date de consommation enregistrée dans le fichier consommation
     df["dernier_paiement_consommation"] = df["annee_mois_paiement"].apply(
         lambda dates: max(pd.to_datetime(dates, format="%Y-%m")) if isinstance(dates, list) else pd.NaT)
     df.drop(columns=["annee_mois_paiement"], inplace=True) #drop old columns
 
-    #Creation of variables on TimeStamp columns: count the days between ref_date and the time
+    #3-Creation of variables on TimeStamp columns: count the days between ref_date and the time
     for col in date_days_columns:
         df[f"{col}_jours"] = (
             ref_date - pd.to_datetime(df[col], format='%Y-%m-%d')
@@ -58,14 +55,17 @@ def feature_engineering(
         df.fillna({f"{col}_jours": -1}, inplace=True) #fill missing values with '-1': indicates that no nps were left
         df.drop(columns=col, inplace=True) #drop old columns
 
-    #Creation of variables on TimeStamp columns: count the months between ref_date and the time
+    #4-Creation of variables on TimeStamp columns: count the months between ref_date and the time
     for col in date_months_columns:
         df[f"{col}_mois"] = (
             (ref_date.year - pd.to_datetime(df[col], format='%Y-%m-%d').dt.year) * 12 +
             (ref_date.month - pd.to_datetime(df[col], format='%Y-%m-%d').dt.month))
         df.fillna({f"{col}_mois": -1}, inplace=True) #fill missing values with '-1': indicates that no paiement occured
         df.drop(columns=col, inplace=True) #drop old columns
-        
-    return df
+    
+    #5- Creation of client_cotisation_rate_n_nplus_1
+    df["client_cotisations_annualisees_rate_n_plus1_n"]= df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"]
+    df["client_cotisations_annualisees_rate_n_n_moins1"]= df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"]
 
+    return df
     
