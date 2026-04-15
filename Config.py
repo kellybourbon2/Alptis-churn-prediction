@@ -4,6 +4,19 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
+# Load variables from secret file
+load_dotenv(override=True)
+
+#------MODEL EXPERIMENT --------------
+#------------------------------------
+MLFLOW_EXPERIMENT_NAME= os.getenv("MLFLOW_EXPERIMENT_NAME", "test")
+MLFLOW_TRACKING_INSECURE_TLS ="true" #disable TSL
+MLFLOW_DISABLE_UV_ENV_DETECTION ="true" #to avoid uv to be detected
+S3_BUCKET_ARTIFACT_TRAINING="s3://projet-bdc-alptis-g2/Artifacts_model_training"
+MLFLOW_S3_IGNORE_TLS="true"
+MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
+MLFLOW_TRACKING_URI= os.getenv("MLFLOW_TRACKING_URI", "https://projet-bdc-data-mlflow.lab.groupe-genes.fr")
+
 #-----------------------------------------------
 #---------------DATA PROCESSING--------------
 #--------------------------------------------
@@ -62,10 +75,6 @@ TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_r
 TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation"]
 
 #----------ENVIRONNEMENT SETTING--------------------------
-
-# Load environment variables
-load_dotenv(override=True)
-
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
