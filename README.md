@@ -69,53 +69,24 @@ Located in `src/data_processing/`, the preprocessing module handles data cleanin
 We've tested different models of training 
 ...
 
-## To create an Argo-workflow locally
-
-1. Create the namespace kubernetes, for example called "argo"
+## To do a Training and track results on MLFLOW
+Once you defined in your branch all the changes (on the data processing and on the model config):
+1. Open a MLFLOW service and copy-paste the password of the service somewhere
+2. Add the following in your `.env `file: 
 ```ini
-kubectl create namespace argo
+MLFLOW_TRACKING_USERNAME=projet-bdc-data
+MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
+MLFLOW_TRACKING_PASSWORD=... 
+EXPERIMENT_NAME=... #example of name of experiment: training-with-impaye-and-smote
 ```
-
-2. Install argoworkflow on the created namespace: 
-```ini
-kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.7.12/install.yaml
-```
-
-3. Share the variables from `.env` file to the namespace kubectl created, as a secret: 
-```ini
-kubectl create secret generic env-secrets --from-env-file=.env -n argo
-```
-4. Create the argo-workflow (from the file `argo_workflows/train_pipeline`) on the namespace:
-```ini
-kubectl create -f argo_workflows/train_pipeline.yaml -n argo
-```
-5. Log to argo-workflow ui in another terminal bash (disable authentification then display on port 2467):
-First desactivate authentification:
-```ini
-kubectl patch deployment argo-server -n argo \
-  --type='json' \
-  -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["server","--auth-mode=server"]}]'
-```
-Then print on port 2746:
-```ini
-while true; do kubectl port-forward svc/argo-server -n argo 2746:2746 2>/dev/null; sleep 1; done
-```
-open:
-https://localhost to see Argoworkflow UI
-
-
-...or see how to setup kubernetes to S3 storage on Onyxia when available (Account > Onyxia)
-Install argoworkflow on namespace:
-
-kubectl apply -n test_namespace -f https://github.com/argoproj/argo-workflows/releases/latest/download/install.yaml
->  Make sure to change your-namespace with the name you gave to the kubectl space you've created.
-> Find credentials for access-key and secret-key in your SSPCloud account under **My Account → Storage**
+> paste the password and make sure to give an "experiment name" with the most precision as possible *Ex: training-with-impaye-and-smote-and-change-of-number-of-estimators-in-XGBOOST* 
+3. Run the model you want in terminal (uv run python train_xgboost.py)
+4. Open the link of URI to see the results
+5. Can see the saved models in bucket bdc-alptis-g2/Artifacts_model_training
 
 ## To create an Argo-Workflow on Onyxia
---> Write when Onyxia's back (issue with Onyxia: impossible to put secrets in kubectl, has to go through Vault i think but not sure)
-
-First, Pass secret credentials to Vault
-... ? 
+First, Pass secret credentials to Vault in a folder named "env_secrets"
+--> ... Voir avec le prof
 
 Then, open an ArgoWorkflow server: 
 1. Create a template Argoworflow
@@ -128,11 +99,20 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 
 # TO DO 
 
-## Model training
->Faire enfin marcher argoworkflow 
->Créer un script pour catboost, random forest : faire un autre DAG, avec un data_preparation_2 sans option encoding 
->Eventuellement script pour rég linéaire: nécessite encore un data_preparation_3 avec encoding + tri sur multicolinéarité
->Ajouter sélection meilleur model + l'étape de clipping finale: 0 si annulation résiliation/ 0 si date_debut_effet_garanti_mois<11.5 à argoworkflow 
+- Créer les variables quantitatives sur analyses textuelles
+-Créer la variable pour le clipping client_effet_garantie_mois < 11.5
+- Trouver un moyen de passer des secrets à kubernetes pour run argoworkflow --> via Vault ???
+--> contacter le prof
+- modif src/model/config: 
+si le temps, ajouter les variables max/min de chaque search_space dans un partie optuna propre a chaque modele
+- tester les script de chaque modele: xgboost ok, tester log_reg, catboost, lightgbm, histgb et random forest 
+
+>Puis créer argoworkflow qui regroupe modeles avec meme data processing 
+ISSUE: ARGOWORKFLOW fonctionne que sur SSPCLOUD pas GENES
+
+>Run plein d'argoworfklow en changeant le dataprocessing (ajout de variables, suppressions d'autres,...) + avec et sans clipping + avec sans smote, ... et tjrs en précisant dans le nom de l'expérience (mlflow/argoworkflow) changement faits sur dataprocessing
+
+- Ajouter sélection meilleur model + l'étape de clipping finale: 0 si annulation résiliation/ 0 si date_debut_effet_garanti_mois<11.5 à la pipeline argoworkflow 
 
 
 ## Data processing
