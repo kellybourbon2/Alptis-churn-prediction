@@ -80,23 +80,36 @@ class DataProcessor:
     # ------------------------------------------------------------------
     # Pipelines run()
     # ------------------------------------------------------------------
-    def run(self, optional_encoding=True, optional_normalisation=True) -> pd.DataFrame:
+    def run(self, optional_encoding=True, optional_normalisation=True, optional_fill_missing_values=True) -> pd.DataFrame:
         """Pipeline TRAIN : fit_transform everything"""
+        #Loading raw data
         df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes = data_loading(self.mode)
-        df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes)
+        
+        #Manual processing with optional filling of missing values
+        df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes, optional_fill_missing_values=optional_fill_missing_values)
+        
+        #Optional encoding
         if optional_encoding:
             df_processed = self.data_encoding(df_processed)
+
+        #Optional_normalisation
         if optional_normalisation:
             logger.info(f"Columns that are normalized: {self.normalized_columns}")
             df_processed = self.data_normalization(df_processed)
         return df_processed
 
-    def run_transform(self, optional_encoding=True, optional_normalisation=True) -> pd.DataFrame:
+    def run_transform(self, optional_encoding=True, optional_normalisation=True, optional_fill_missing_values=True) -> pd.DataFrame:
         """Pipeline TEST/VAL : transform only, without re-fitting"""
+        #Load data
         df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes = data_loading(self.mode)
-        df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes)
+        #Manual processing with optional filling of NaN
+        df_processed = self.manual_preprocessing(df_portefeuille, df_consommations, df_reclamations, df_interactions, df_impayes, optional_fill_missing_values=optional_fill_missing_values)
+        
+        #Optional encoding
         if optional_encoding:
             df_processed = self.data_encoding_transform(df_processed)
+
+        #Optional normalisation
         if optional_normalisation:
             df_processed = self.data_normalization_transform(df_processed)
         return df_processed
@@ -112,6 +125,7 @@ class DataProcessor:
         df_reclamations,
         df_interactions,
         df_impayes,
+        optional_fill_missing_values:bool
     ) -> pd.DataFrame:
         """Complete manual preprocessing pipeline:
         1. clean
@@ -132,8 +146,8 @@ class DataProcessor:
         Returns:
             Cleaned and fully merged DataFrame with one row per client
         """
-        # Step 1: Clean portfolio
-        df_portefeuille = portefeuille_cleaning(df_portefeuille)
+        # Step 1: Clean portfolio, with optional missing values cleaning
+        df_portefeuille = portefeuille_cleaning(df_portefeuille, optional_fill_missing_values= optional_fill_missing_values)
 
         # Step 2: Aggregate secondary files to client level
         df_consommations = aggregate_consommations(df_consommations)
@@ -152,11 +166,13 @@ class DataProcessor:
         # Step 5: Add external data
         df = add_revenu_insee(df, new_column_revenu_name=NEW_COLUMN_REVENU_INSEE, revenu_median_fr=REVENU_MEDIAN_FRANCE_2021)
 
-        # Step 6: Fill missing values by feature type
+        # Step 6: Fill missing values by feature type after the agregation 
         self._fill_reclamations_na(df)
         self._fill_consumption_na(df)
-        self._fill_interactions_na(df)
-        self._fill_overdue_na(df)
+        #Can be optional on interactions and impaye files
+        # since some of the NaN corresponds to non happening events (date)
+        self._fill_impaye_na(df, optional_fill_missing_values)
+        self._fill_interactions_na(df, optional_fill_missing_values)
 
         # Step 7: Drop useless columns
         cols_to_drop = [
@@ -331,14 +347,17 @@ class DataProcessor:
         conso_cols = [c for c in df.columns if c.startswith(("frais", "remb", "nb", "reste_a_charge"))]
         df[conso_cols] = df[conso_cols].fillna(0)
 
-    def _fill_interactions_na(self, df: pd.DataFrame) -> None:
-        exclude_cols = {"interaction_historique_mail"}
-        inter_cols = [c for c in df.columns if c.startswith("interaction") and c not in exclude_cols]
+    def _fill_interactions_na(self, df: pd.DataFrame, optional_fill_missing_values: bool) -> None:
+        inter_cols = [c for c in df.columns if c.startswith("interaction") and c not in ["last_interaction_date_mois"]]
         df[inter_cols] = df[inter_cols].fillna(0)
 
-    def _fill_overdue_na(self, df: pd.DataFrame) -> None:
+        if optional_fill_missing_values:
+            df["last_interaction_date_mois"] = df["last_interaction_date_mois"].fillna(-1) #optional because date of non happening event 
+
+    def _fill_impaye_na(self, df: pd.DataFrame , optional_fill_missing_values: bool) -> None:
         impaye_cols = [c for c in df.columns if c.startswith("impaye")]
-        df[impaye_cols] = df[impaye_cols].fillna(0)
+        if optional_fill_missing_values:
+            df[impaye_cols] = df[impaye_cols].fillna(-1) #0 for non happening event
 
 
 # ----------------------------------------------------------------------
