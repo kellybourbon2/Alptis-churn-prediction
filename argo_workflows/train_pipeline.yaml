@@ -1,6 +1,8 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
 metadata:
-  name: data-prep-training-pipeline
-  namespace: projet-bdc-data
+  name: test-workkk5
+  namespace: user-kbourbon
 
 spec:
   parallelism: 5
@@ -12,13 +14,14 @@ spec:
   - name: pipeline
     dag:
       tasks:
-        # Data preparation (all 3 in parallel)
+
+        # Data preparation (parallel)
         - name: prepare-data-no-enc-no-norm
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_no_enc_no_norm.py"
+                value: "src/data_processing/prepare_data_noenc_no_norm.py"
 
         - name: prepare-data-enc-no-norm
           template: prepare-data
@@ -83,7 +86,7 @@ spec:
       parameters:
         - name: script
     container:
-      image: kellybrbn/bdc-alptis:data_preparation
+      image: kellybrbn/bdc-alptis:latest
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
       args: ["{{inputs.parameters.script}}"]
@@ -93,21 +96,25 @@ spec:
             secretKeyRef:
               name: env-secrets
               key: AWS_ACCESS_KEY_ID
+
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SECRET_ACCESS_KEY
+
         - name: AWS_SESSION_TOKEN
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SESSION_TOKEN
-        - name: AWS_SESSION_TOKEN
+
+        - name: MLFLOW_TRACKING_PASSWORD
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: MLFLOW_TRACKING_PASSWORD
+
       resources:
         requests:
           memory: "2Gi"
@@ -122,7 +129,7 @@ spec:
       parameters:
         - name: script
     container:
-      image: kellybrbn/bdc-alptis:training
+      image: kellybrbn/bdc-alptis:latest
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
       args: ["{{inputs.parameters.script}}"]
@@ -132,26 +139,34 @@ spec:
             secretKeyRef:
               name: env-secrets
               key: AWS_ACCESS_KEY_ID
+
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SECRET_ACCESS_KEY
+
         - name: AWS_SESSION_TOKEN
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SESSION_TOKEN
+
         - name: AWS_S3_ENDPOINT
           value: "minio-simple.lab.groupe-genes.fr"
+
         - name: MLFLOW_TRACKING_URI
           value: "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+
         - name: MLFLOW_S3_ENDPOINT_URL
           value: "https://minio-simple.lab.groupe-genes.fr"
+
         - name: MLFLOW_TRACKING_INSECURE_TLS
           value: "true"
+
         - name: MLFLOW_S3_IGNORE_TLS
           value: "true"
+
       resources:
         requests:
           memory: "1Gi"
