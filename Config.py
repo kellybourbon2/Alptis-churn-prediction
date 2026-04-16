@@ -9,13 +9,16 @@ load_dotenv(override=True)
 
 #------MODEL EXPERIMENT --------------
 #------------------------------------
-MLFLOW_EXPERIMENT_NAME= os.getenv("MLFLOW_EXPERIMENT_NAME", "test")
+
+MLFLOW_EXPERIMENT_NAME= "classic_experiment"
+
 MLFLOW_TRACKING_INSECURE_TLS ="true" #disable TSL
 MLFLOW_DISABLE_UV_ENV_DETECTION ="true" #to avoid uv to be detected
 S3_BUCKET_ARTIFACT_TRAINING="s3://projet-bdc-alptis-g2/Artifacts_model_training"
 MLFLOW_S3_IGNORE_TLS="true"
 MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
-MLFLOW_TRACKING_URI= os.getenv("MLFLOW_TRACKING_URI", "https://projet-bdc-data-mlflow.lab.groupe-genes.fr")
+MLFLOW_TRACKING_URI= "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+MLFLOW_TRACKING_USERNAME= "projet-bdc-data"
 
 #-----------------------------------------------
 #---------------DATA PROCESSING--------------

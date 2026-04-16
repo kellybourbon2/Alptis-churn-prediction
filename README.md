@@ -71,51 +71,44 @@ We've tested different models of training
 
 ## To do a Training and track results on MLFLOW
 Once you defined in your branch all the changes (on the data processing and on the model config):
+0. Change the variable MLFLOW_EXPERIMENT_NAME with the name of your experiment
 1. Open a MLFLOW service and copy-paste the password of the service somewhere
 2. Add the following in your `.env `file: 
 ```ini
 MLFLOW_TRACKING_USERNAME=projet-bdc-data
 MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
 MLFLOW_TRACKING_PASSWORD=... 
-EXPERIMENT_NAME=... #example of name of experiment: training-with-impaye-and-smote
 ```
-> paste the password and make sure to give an "experiment name" with the most precision as possible *Ex: training-with-impaye-and-smote-and-change-of-number-of-estimators-in-XGBOOST* 
-3. Run the model you want in terminal (uv run python train_xgboost.py)
+>Paste the password saved in step 1
+3. Run the model you want in terminal (*ex: uv run python train_xgboost.py*)
 4. Open the link of URI to see the results
 5. Can see the saved models in bucket bdc-alptis-g2/Artifacts_model_training
 
 ## To create an Argo-Workflow on Onyxia
 
-First, pass secret credentials to kubernetes:  
+⚠️ **Very important**: create a VSCode with "Admin" role selected.
 
-1. First, encode your 4 secrets in your terminal like that: 
-```bash
-echo -n 'mlflow-tracking-password' | base64
-echo -n 'aws-access-key-id' | base64
-echo -n 'aws-secret-access-key' | base64
-echo -n 'aws-session-token' -w 0 | base64
+Then, pass secret credentials to kubernetes:  
+
+1. Create in a file, named `secret.yaml` with all your secrets variables, as followed: 
 ```
-Copy the output: this is your encoded secrets. 
-
-2. Paste in a file, named `secret.yaml` the encoded secrets, as followed: 
-```secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: env-secrets 
 type: Opaque
-data:
-  MLFLOW_TRACKING_PASSWORD: encoded-mlflow-tracking
-  AWS_SECRET_ACCESS_KEY: encoded-secret-access-key-id
-  AWS_SESSION_TOKEN: encoded-session-token
-  MLFLOW_TRACKING_PASSWORD: encoded-mlflow-tracking-password
+stringData:
+  AWS_ACCESS_KEY_ID: ...
+  AWS_SECRET_ACCESS_KEY: ... 
+  AWS_SESSION_TOKEN: ....
+  MLFLOW_TRACKING_PASSWORD: ....
 ```
-3. Pass the secret to the kubernetes cluster: 
+2. Pass the secrets to the kubernetes cluster: 
 ```bash
 kubectl apply -f ./secret.yaml
 ```
 
-Then, open an ArgoWorkflow server: 
+Then, open the shared ArgoWorkflow server ("Alptis-argo-workflows") :
 1. Create a template Argoworflow
 2. Paste the workflow in the template : argo_workflows\train_pipeline.yaml
 >  make sure to change to namespace variable with your own namespace. *Ex: user-kbourbon* 
