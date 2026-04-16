@@ -16,3 +16,4 @@ RUN uv sync --frozen
 
 COPY Config.py .
 COPY src/ ./src/ 
+COPY data_external/revenu_median_communes.csv .

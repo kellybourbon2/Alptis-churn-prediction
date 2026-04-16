@@ -1,8 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  name: test-workkk5
-  namespace: user-kbourbon
+  name: test-workkk8
+    namespace: user-kbourbon
 
 spec:
   parallelism: 5
@@ -21,14 +21,14 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_noenc_no_norm.py"
+                value: "src/data_processing/prepare_data_noenc_nonorm.py"
 
         - name: prepare-data-enc-no-norm
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_enc_no_norm.py"
+                value: "src/data_processing/prepare_data_enc_nonorm.py"
 
         - name: prepare-data-enc-norm
           template: prepare-data
@@ -37,7 +37,7 @@ spec:
               - name: script
                 value: "src/data_processing/prepare_data_enc_norm.py"
 
-        # Boosting models (enc_no_norm)
+        # Boosting models (enc_nonorm)
         - name: train-xgboost
           dependencies: [prepare-data-enc-no-norm]
           template: train
@@ -62,7 +62,7 @@ spec:
               - name: script
                 value: "src/models/train_histgb.py"
 
-        # CatBoost (no_enc_no_norm)
+        # CatBoost (noenc_nonorm)
         - name: train-catboost
           dependencies: [prepare-data-no-enc-no-norm]
           template: train

@@ -107,13 +107,11 @@ stringData:
 ```bash
 kubectl apply -f ./secret.yaml
 ```
-
-Then, open the shared ArgoWorkflow server ("Alptis-argo-workflows") :
-1. Create a template Argoworflow
-2. Paste the workflow in the template : argo_workflows\train_pipeline.yaml
->  make sure to change to namespace variable with your own namespace. *Ex: user-kbourbon* 
-3. Create workflow
-
+3. Run the workflow in argoworkflow
+```bash
+kubectl apply -f argo_workflows/train_pipeline.yaml
+```
+4. Open the server argoworkflow to visualise the workflow
 
 #### Demo (only for dev - to delete later)
 Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
@@ -121,9 +119,7 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 # TO DO 
 
 - Créer les variables quantitatives sur analyses textuelles
--Créer la variable pour le clipping client_effet_garantie_mois < 11.5
-
-
+CHANGER MLFLOW d'expériences: la c'est dans projet-bdc-alptis au lieu de projet-bdc-alptis-g2
 FINIR ARGOWORKFLOW pour entrainement modeles
 - Trouver un moyen de passer des secrets à kubernetes pour run argoworkflow --> via Vault ???
 --> cf réponse prof
