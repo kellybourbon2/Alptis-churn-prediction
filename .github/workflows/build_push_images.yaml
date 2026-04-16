@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  build-push-data-preparation:
+  build-push:
     runs-on: ubuntu-latest
     steps:
 
@@ -20,12 +20,12 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build data prep image
+      - name: Build image
         run: |
           docker build \
             -f docker/Dockerfile \
             -t kellybrbn/bdc-alptis:latest .
 
-      - name: Push data prep image
+      - name: Push image
         run: |
           docker push kellybrbn/bdc-alptis:latest
