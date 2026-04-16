@@ -85,14 +85,42 @@ EXPERIMENT_NAME=... #example of name of experiment: training-with-impaye-and-smo
 5. Can see the saved models in bucket bdc-alptis-g2/Artifacts_model_training
 
 ## To create an Argo-Workflow on Onyxia
-First, Pass secret credentials to Vault in a folder named "env_secrets"
---> ... Voir avec le prof
+
+First, pass secret credentials to kubernetes:  
+
+1. First, encode your 4 secrets in your terminal like that: 
+```bash
+echo -n 'mlflow-tracking-password' | base64
+echo -n 'aws-access-key-id' | base64
+echo -n 'aws-secret-access-key' | base64
+echo -n 'aws-session-token' -w 0 | base64
+```
+Copy the output: this is your encoded secrets. 
+
+2. Paste in a file, named `secret.yaml` the encoded secrets, as followed: 
+```secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: env-secrets 
+type: Opaque
+data:
+  MLFLOW_TRACKING_PASSWORD: encoded-mlflow-tracking
+  AWS_SECRET_ACCESS_KEY: encoded-secret-access-key-id
+  AWS_SESSION_TOKEN: encoded-session-token
+  MLFLOW_TRACKING_PASSWORD: encoded-mlflow-tracking-password
+```
+3. Pass the secret to the kubernetes cluster: 
+```bash
+kubectl apply -f ./secret.yaml
+```
 
 Then, open an ArgoWorkflow server: 
 1. Create a template Argoworflow
 2. Paste the workflow in the template : argo_workflows\train_pipeline.yaml
 >  make sure to change to namespace variable with your own namespace. *Ex: user-kbourbon* 
 3. Create workflow
+
 
 #### Demo (only for dev - to delete later)
 Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
