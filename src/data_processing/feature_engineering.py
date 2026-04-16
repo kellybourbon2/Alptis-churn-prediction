@@ -64,8 +64,11 @@ def feature_engineering(
         df.drop(columns=col, inplace=True) #drop old columns
     
     #5- Creation of client_cotisation_rate_n_nplus_1
-    df["client_cotisations_evolution_rate_n_plus1_n"]= df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"]
-    df["client_cotisations_evolution_rate_n_n_moins1"]= df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"]
+    df["client_cotisations_taux_croissance_n_plus1_n"]= (df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"])/df["client_cotisations_annualisees_n"]
+    df["client_cotisations_taux_croissance_n_n_moins1"]= (df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"])/ df["client_cotisations_annualisees_n_moins1"]
+
+    #6 - Creation of boolean variable for future clipping "client_toujours_engagé": indicates whether or not the client is still engaged given the tenure of its contract
+    df["client_toujours_engage"] = df["client_date_debut_effet_garantie_mois"] <= 11.5 #11.5 because 6 months for target retrieval (end of may- end of november)
 
     return df
     

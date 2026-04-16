@@ -18,5 +18,6 @@
 | derniere_interaction_date_mois | int | Count the number of months between the last interaction and the reference date |
 |client_date_debut_effet_garantie_mois | int | Count the number of months between the beginning of the contract and the reference date |
 |dernier_paiement_consommation | int | Count the number of months between the last consumption refund and the reference date |
-|client_cotisation_evolution_n_plus1_n | int | Count the difference between the cotisation between n+1 and n |
-|client_cotisation_evolution_n_n_moins1 | int | Count the difference between the cotisation between n and n-1 |
+|client_cotisation_taux_croissance_n_plus1_n | int | Count the difference between the cotisation between n+1 and n |
+|client_cotisation_taux_croissance_n_n_moins1 | int | Count the difference between the cotisation between n and n-1 |
+|client_toujours_engage | bool | Indicates whether or not the client is still engaged with Alptis given the age of its contract (if its contracts has less than 11.5 month --> 1) |
