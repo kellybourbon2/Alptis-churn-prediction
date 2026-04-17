@@ -38,7 +38,9 @@ from Config import (
     COLUMNS_ORDINAL,
     NEW_COLUMN_REVENU_INSEE,
     REVENU_MEDIAN_FRANCE_2021,
-    KEY_COLUMN
+    KEY_COLUMN, 
+    COLUMNS_TO_KEEP, 
+    TRY_FEW_COLUMNS
 )
 
 def get_reference_date(mode: Literal["training", "validation", "evaluation"]) -> pd.Timestamp:
@@ -179,10 +181,11 @@ class DataProcessor:
         self._fill_interactions_na(df, optional_fill_missing_values)
 
         # Step 8: Drop useless columns
-        cols_to_drop = [
-            col for col in df.columns
-            if col.startswith(self.files_to_drop) or col in self.columns_to_drop
-        ]
+        if TRY_FEW_COLUMNS:
+            cols_to_drop = [col for col in df.columns if col not in COLUMNS_TO_KEEP]
+        else: 
+            cols_to_drop = [col for col in df.columns if col.startswith(self.files_to_drop) or col in self.columns_to_drop]
+        
         df = df.drop(columns=cols_to_drop, errors="ignore")
         logger.info(f"Dropped columns from dataset: {cols_to_drop}")
 

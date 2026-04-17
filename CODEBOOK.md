@@ -14,7 +14,7 @@
 | interaction_motif_... | int | 7 variables (one for each of the 7 most frequent reasons): each counts the number of client interactions for the specified reason |
 | frais_reel_... | float | One variable per healthcare category: each contains the total actual expenses over the full year for the client and specified category |
 | reste_a_charge_... | float | One variable per healthcare category: each contains the total out-of-pocket expenses over the full year for the client and specified category |
-| client_revenu_commune_2021... | int | Median income of the municipality where the client lives |
+| client_revenu_commune_2021 | int | Median income of the municipality where the client lives |
 | derniere_interaction_date_mois | int | Count the number of months between the last interaction and the reference date |
 |client_date_debut_effet_garantie_mois | int | Count the number of months between the beginning of the contract and the reference date |
 |dernier_paiement_consommation | int | Count the number of months between the last consumption refund and the reference date |
