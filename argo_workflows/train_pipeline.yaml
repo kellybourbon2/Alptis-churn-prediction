@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testargo
+    name: testargo2kelly
     namespace: user-kbourbon
 
 spec:

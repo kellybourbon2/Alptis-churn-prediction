@@ -162,7 +162,7 @@ class DataProcessor:
             df = df.merge(other_df, how="left", on=self.key_column)
 
         # Step 4: Feature engineering 
-        df = feature_engineering(df, ref_date=self.ref_date)
+        df = feature_engineering(df, ref_date=self.ref_date, optional_fill_missing_values=optional_fill_missing_values)
 
         # Step 5: Add features on textual data (nps review and mails from interaction)
         df = create_nps_features(df) 
