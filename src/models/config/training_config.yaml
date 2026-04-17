@@ -10,7 +10,7 @@ training:
   n_iter_no_change: 20        #for histgbm and lightbgm
   early_stopping_round: 50   #for Catboost, Xgboost
   device : "cuda"
-  task_type : "GPU" #for Catboost
+  task_type : "CPU" #for Catboost bc not enough resource in kubernetes argoworkflow to use CUDA
   scale_pos_weight : 8.175 # (nbr of y=0 samples) / (# nbr of y=1 samples) in training set
   verbose: 0
 

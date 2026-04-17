@@ -1,4 +1,4 @@
-# Features engineering/External data (before encoding)
+# Features engineering/External data/Textual features created (before encoding)
 
 | Variable | Type | Description |
 |----------|------|-------------|
