@@ -95,7 +95,7 @@ COLUMNS_TO_DROP = [] #put the columns you want to drop here
 
 In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create 
 
-4. Please copy/paste the variables you've selected/keep in 
+4. Please copy-paste the variables you've selected/drop and the name of your experiment in TRACK_EXPERIMENT_MLFLOW.py to have a track of the dataset selected.
 
 ## Then you can you create the argoworkflow experiment
 
