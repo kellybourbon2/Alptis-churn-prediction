@@ -83,17 +83,19 @@ We've tested different models of training :
 
 ## First you need to specify the variables you want on this experiment
 1. Open Config.py file
-2. Change the first 4 variables of MODEL_EXPERIMENT part as you want
+2. Change the first 4 variables as you want
 
-- If you want only want to keep a list of selected variables from the dataset:
+- If you just want to keep a list of selected variables from the dataset:
 TRY_FEW_COLUMNS = True
-COLUMNS_TO_KEEP = [] #put the columns you want to keep here
+COLUMNS_TO_KEEP = [] #put the only columns you want to keep here
 
 - If you just want to drop some variables from the dataset: 
 TRY_FEW_COLUMNS = False
 COLUMNS_TO_DROP = [] #put the columns you want to drop here
 
 In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create 
+
+4. Please copy/paste the variables you've selected/keep in 
 
 ## Then you can you create the argoworkflow experiment
 
@@ -165,30 +167,20 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 
 # TO DO 
 
-- Créer variable sur reclamation
 
-Attention; mlflow experience dans projet-bdc-alptis
-
-FINIR ARGOWORKFLOW pour entrainement modeles
-
-
-
-
-- écrire des script avec missing_values laissées dans data preparation: en faisant attention a option fill missing values --> tester sur modeles robuste a missing values et voir si diff en terme de score
-
-- Check si yaml ok selon les specificités de chaque modele
+Dans branche dévelopement: 
+- écrire des script avec missing_values laissées dans data preparation: en faisant attention a option fill missing values --> tester sur modeles robuste a missing values et voir si diff en terme de score +  Check si yaml ok selon les specificités de chaque modele
 
 EXPORT... les var mlflow pour tester rapidos script training
 
-
-- creer github workflow action pour updater les X_train/Y_train/... du bucket S3 automatiquement à chaque modif du dossier data_processing (ie workflow qui run chacun des prepare_data...) --> pour tester sur MLFLOW pratique
-
->Puis créer argoworkflow qui regroupe modeles avec meme data processing 
-ISSUE: ARGOWORKFLOW fonctionne que sur SSPCLOUD pas GENES
-
->Run plein d'argoworfklow en changeant le dataprocessing (ajout de variables, suppressions d'autres,...) + avec et sans clipping + avec sans smote, ... et tjrs en précisant dans le nom de l'expérience (mlflow/argoworkflow) changement faits sur dataprocessing
-
 - Ajouter sélection meilleur model + l'étape de clipping finale: 0 si annulation résiliation/ 0 si date_debut_effet_garanti_mois<11.5 à la pipeline argoworkflow 
+
+- Run plein d'argoworfklow en changeant le dataprocessing (ajout de variables, suppressions d'autres,...) + avec et sans clipping + avec sans smote, ... et tjrs en précisant dans le nom de l'expérience (mlflow/argoworkflow) changement faits sur dataprocessing
+
+- modeles interpretables: 
+extraire le meilleur random forest/logistique regression (cf roc auc) et charger modele enregistré dans artifact
+--> log reg: etudier signe des coeff + p-value et générer un truc pour partie analysis of result
+--> random forest: créer arbre de décision le + proche
 
 
 ## Data processing
