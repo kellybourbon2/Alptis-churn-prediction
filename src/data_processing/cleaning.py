@@ -32,7 +32,7 @@ def portefeuille_cleaning(df_portefeuille, optional_fill_missing_values:bool):
 
         #2 -Imputing NaN in cotisation columns with 0
         cotisation_cols = [c for c in df_portefeuille_cleaned.columns if c.startswith(("client_cotisation"))]
-        df_portefeuille_cleaned.fillna({col: 0 for col in cotisation_cols}, inplace=True)
+        df_portefeuille_cleaned.fillna({col: -1 for col in cotisation_cols}, inplace=True)
         
         #3- Imputing NaN in courtier_type_commission based on courtier_code_apporteur
         mode_par_courtier = (

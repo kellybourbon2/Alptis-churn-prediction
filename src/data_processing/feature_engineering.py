@@ -21,6 +21,7 @@ from Config import (
 def feature_engineering(
     df: pd.DataFrame,
     ref_date: pd.Timestamp, 
+    optional_fill_missing_values: bool,
     date_days_columns= TIMESTAMP_COLUMNS_DAYS,
     date_months_columns=  TIMESTAMP_COLUMNS_MONTHS,
     age_column=AGE_COLUMN,
@@ -28,7 +29,7 @@ def feature_engineering(
     age_labels=AGE_LABELS,
     age_bins=AGE_BINS,
     anciennete_bins=ANCIENNETE_BINS,
-    anciennete_labels=ANCIENNETE_LABELS
+    anciennete_labels=ANCIENNETE_LABELS,
 )-> pd.DataFrame:
 
     """Creation of new columns based on existing columns in merged file
@@ -66,9 +67,14 @@ def feature_engineering(
     #5- Creation of client_cotisation_rate_n_nplus_1
     df["client_cotisations_taux_croissance_n_plus1_n"]= (df["client_cotisations_annualisees_n_plus1"]- df["client_cotisations_annualisees_n"])/df["client_cotisations_annualisees_n"]
     df["client_cotisations_taux_croissance_n_n_moins1"]= (df["client_cotisations_annualisees_n"] - df["client_cotisations_annualisees_n_moins1"])/ df["client_cotisations_annualisees_n_moins1"]
-
+    
     #Sanitize from inf/-inf created
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    if optional_fill_missing_values:
+        #Optional filling of new missing values with -1
+        df["client_cotisations_taux_croissance_n_n_moins1"]=df["client_cotisations_taux_croissance_n_n_moins1"].fillna(-1)
+        df["client_cotisations_taux_croissance_n_plus1_n"]=df["client_cotisations_taux_croissance_n_plus1_n"].fillna(-1)
     
     #6 - Creation of boolean variable for future clipping "client_toujours_engagé": indicates whether or not the client is still engaged given the tenure of its contract
     df["client_toujours_engage"] = df["client_date_debut_effet_garantie_mois"] <= 11.5 #11.5 because 6 months for target retrieval (end of may- end of november)
