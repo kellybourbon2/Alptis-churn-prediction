@@ -22,6 +22,7 @@ from src.data_processing.aggregation import (
 )
 from src.data_processing.cleaning import portefeuille_cleaning
 from src.data_processing.feature_engineering import feature_engineering
+from src.data_processing.text_processing import create_nps_features
 from src.data_processing.data_external import add_revenu_insee
 
 
@@ -160,13 +161,16 @@ class DataProcessor:
         for other_df in [df_reclamations, df_consommations, df_impayes, df_interactions]:
             df = df.merge(other_df, how="left", on=self.key_column)
 
-        # Step 4: Feature engineering
+        # Step 4: Feature engineering 
         df = feature_engineering(df, ref_date=self.ref_date)
 
-        # Step 5: Add external data
+        # Step 5: Add features on textual data (nps review and mails from interaction)
+        df = create_nps_features(df) 
+
+        # Step 6: Add external data
         df = add_revenu_insee(df, new_column_revenu_name=NEW_COLUMN_REVENU_INSEE, revenu_median_fr=REVENU_MEDIAN_FRANCE_2021)
 
-        # Step 6: Fill missing values by feature type after the agregation 
+        # Step 7: Fill missing values by feature type after the agregation 
         self._fill_reclamations_na(df)
         self._fill_consumption_na(df)
         #Can be optional on interactions and impaye files
@@ -174,7 +178,7 @@ class DataProcessor:
         self._fill_impaye_na(df, optional_fill_missing_values)
         self._fill_interactions_na(df, optional_fill_missing_values)
 
-        # Step 7: Drop useless columns
+        # Step 8: Drop useless columns
         cols_to_drop = [
             col for col in df.columns
             if col.startswith(self.files_to_drop) or col in self.columns_to_drop

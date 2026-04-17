@@ -70,6 +70,7 @@ COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
     "courtier_anciennete_categories": ANCIENNETE_LABELS,
     'client_frequence_paiement': ['SEM','MS','TRIM','AN'], #valeurs de frequence paiement ordonnées
+    "client_nps_category_n":  ["detractor", "passive", "promoter"]
 }
 
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)

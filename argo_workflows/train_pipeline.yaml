@@ -23,21 +23,21 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_noenc_nonorm.py"
+                value: "src/data_preparation/prepare_data_noenc_nonorm.py"
 
         - name: prepare-data-enc-no-norm
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_enc_nonorm.py"
+                value: "src/data_preparation/prepare_data_enc_nonorm.py"
 
         - name: prepare-data-enc-norm
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_processing/prepare_data_enc_norm.py"
+                value: "src/data_preparation/prepare_data_enc_norm.py"
 
         # Boosting models (enc_nonorm)
         - name: train-xgboost

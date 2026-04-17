@@ -77,11 +77,8 @@ def get_model(params: dict, cfg: dict):
     return LGBMClassifier(
         **params,
         class_weight="balanced",
-        early_stopping=cfg["early_stopping"],
-        n_iter_no_change=cfg["n_iter_no_change"],
         random_state=cfg["random_state"],
     )
-
 
 def build_pipeline(estimator, cfg: dict):
     if cfg["use_smote"]:
@@ -105,7 +102,7 @@ def get_search_space(trial, o: dict):
 
 
 def run_optuna(X_train, y_train, cfg: dict):
-    o = cfg["optuna"]
+    o = cfg["optuna"]["lightgbm"]
 
     def objective(trial):
         params = get_search_space(trial, o)
