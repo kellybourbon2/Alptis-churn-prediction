@@ -79,10 +79,9 @@ The **`CODEBOOK.md`** presents a description of each variable created during fea
 We've tested different models of training :
 ...
 
+# How to create an Argo-Workflow experiment on Onyxia:
 
-## How to create an Argo-Workflow experiment on Onyxia:
-
-⚠️ **Very important**: create a VSCode with "Admin" role selected before cloning the project. 
+⚠️ **Very important**: create a VSCode with "Admin" role selected and then clone the project in it. 
 
 1. Create in a file, named `secret.yaml` with all your secrets variables, in the root of the project, as followed: 
 ```
@@ -101,8 +100,7 @@ stringData:
 ```bash
 kubectl apply -f ./secret.yaml
 ```
-3. Change the namespace and the name of the argoworkflow (can work if name already used): 
-File : Alptis-churn-prediction/argo_workflows/train_pipeline.yaml
+3. Change the namespace and the name of the argoworkflow (argoworkflow can not work if the name is already used) in file `argo_workflows/train_pipeline.yaml`
 --> see row "metadata" with namespace and name of argoworkflow
 
 4. Run the workflow in argoworkflow
