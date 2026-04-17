@@ -95,14 +95,35 @@ def build_pipeline(estimator, cfg: dict):
 # ── Optuna ────────────────────────────────────────────────────────────────────
 def get_search_space(trial, o):
     return {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 800),
-        "max_depth": trial.suggest_int("max_depth", o["max_depth_min"], o["max_depth_max"]),
-        "learning_rate": trial.suggest_float("learning_rate", o["lr_min"], o["lr_max"], log=True),
-        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
-        "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
-        "gamma": trial.suggest_float("gamma", 0, 5),
-        "reg_lambda": trial.suggest_float("reg_lambda", o["l2_reg_min"], o["l2_reg_max"], log=True),
+        # boosting rounds
+        "n_estimators": trial.suggest_int("n_estimators", 200, 3000),
+
+        # tree complexity
+        "max_depth": trial.suggest_int("max_depth", 3, 10),
+        "min_child_weight": trial.suggest_float("min_child_weight", 1, 20, log=True),
+
+        # learning rate
+        "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.15, log=True),
+
+        # row / feature sampling
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
+        "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.5, 1.0),
+
+        # regularization
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 100, log=True),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 50, log=True),
+
+        # split control
+        "gamma": trial.suggest_float("gamma", 1e-8, 10, log=True),
+
+        # leaf step size / robustness
+        "max_delta_step": trial.suggest_float("max_delta_step", 0, 10),
+
+        # grow method
+        "grow_policy": trial.suggest_categorical(
+            "grow_policy", ["depthwise", "lossguide"]
+        ),
     }
 
 

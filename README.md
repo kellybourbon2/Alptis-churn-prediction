@@ -78,6 +78,7 @@ Once you defined in your branch all the changes (on the data processing and on t
 MLFLOW_TRACKING_USERNAME=projet-bdc-data
 MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
 MLFLOW_TRACKING_PASSWORD=... 
+MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
 ```
 >Paste the password saved in step 1
 3. Run the model you want in terminal (*ex: uv run python train_xgboost.py*)
@@ -119,12 +120,19 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 # TO DO 
 
 - Créer les variables quantitatives sur analyses textuelles
-CHANGER MLFLOW d'expériences: la c'est dans projet-bdc-alptis au lieu de projet-bdc-alptis-g2
+
+Attention; mlflow experience dans projet-bdc-alptis
+
 FINIR ARGOWORKFLOW pour entrainement modeles
-- Trouver un moyen de passer des secrets à kubernetes pour run argoworkflow --> via Vault ???
---> cf réponse prof
-- réécrire script data preparation: en faisant attention a option fill missing values
+
+
+
+
+- écrire des script avec missing_values laissées dans data preparation: en faisant attention a option fill missing values --> tester sur modeles robuste a missing values et voir si diff en terme de score
+
 - Check si yaml ok selon les specificités de chaque modele
+
+EXPORT... les var mlflow pour tester rapidos script training
 
 - modif src/model/config: 
 si le temps, ajouter les variables max/min de chaque search_space dans un partie optuna propre a chaque modele

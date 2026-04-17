@@ -11,7 +11,6 @@ load_dotenv(override=True)
 #------------------------------------
 
 MLFLOW_EXPERIMENT_NAME= "classic_experiment"
-
 MLFLOW_TRACKING_INSECURE_TLS ="true" #disable TSL
 MLFLOW_DISABLE_UV_ENV_DETECTION ="true" #to avoid uv to be detected
 S3_BUCKET_ARTIFACT_TRAINING="s3://projet-bdc-alptis-g2/Artifacts_model_training"

@@ -101,17 +101,26 @@ def build_pipeline(estimator, cfg):
 # ── OPTUNA ─────────────────────────────────────────────
 
 def get_search_space(trial):
-    return {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 1200),
-        "max_depth": trial.suggest_int("max_depth", 3, 40),
-        "min_samples_split": trial.suggest_int("min_samples_split", 2, 20),
-        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 20),
+    bootstrap = trial.suggest_categorical("bootstrap", [True, False])
+
+    params = {
+        "n_estimators": trial.suggest_int("n_estimators", 200, 1000),
+        "max_depth": trial.suggest_int("max_depth", 4, 24),
+        "min_samples_split": trial.suggest_int("min_samples_split", 2, 30),
+        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 15),
         "max_features": trial.suggest_categorical(
-            "max_features", ["sqrt", "log2", None]
+            "max_features",
+            ["sqrt", "log2", 0.3, 0.5, 0.7, None]
         ),
-        "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+        "bootstrap": bootstrap,
     }
 
+    if bootstrap:
+        params["max_samples"] = trial.suggest_float(
+            "max_samples", 0.5, 1.0
+        )
+
+    return params
 
 def run_optuna(X_train, y_train, cfg):
 
@@ -185,10 +194,6 @@ def mlflow_run(cfg, best_params, best_cv, model, X_train, X_test, y_train, y_tes
         if shap_info:
             mlflow.log_params(shap_info)
 
-        shap_info = compute_shap(model, X_sample)
-        if shap_info:
-            mlflow.log_params(shap_info)
-
         # SAVE MODEL
         mlflow.sklearn.log_model(model, name=MODEL_NAME,)
 
@@ -203,7 +208,7 @@ def main():
     Path(cfg["output_dir"]).mkdir(exist_ok=True)
 
     print("\n" + "="*60)
-    print(f"{MODEL_NAME} training ...")
+    print("Random forest training ...")
     print("="*60 + "\n")
     
     X_train = load_data_processed_from_S3(f"X_train_{cfg['data_suffix']}")

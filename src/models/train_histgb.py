@@ -5,6 +5,7 @@ Imbalance: class_weight='balanced' / SMOTE
 """
 
 import sys
+import os
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
@@ -41,7 +42,7 @@ warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 from src.data_processing.data_load import load_data_processed_from_S3
-from Config import MLFLOW_EXPERIMENT_NAME
+from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING
 
 MODEL_NAME = "histgb"
 
@@ -169,7 +170,7 @@ def mlflow_run(cfg, best_params, best_cv, estimator, X_train, X_test, y_train, y
         if shap_info:
             mlflow.log_params(shap_info)
 
-        mlflow.sklearn.log_model(estimator.named_steps["model"], MODEL_NAME,  pip_requirements=False)
+        mlflow.sklearn.log_model(estimator.named_steps["model"], MODEL_NAME,  pip_requirements=[])
 
         pred  = estimator.predict(X_test)
         proba = estimator.predict_proba(X_test)[:, 1]
