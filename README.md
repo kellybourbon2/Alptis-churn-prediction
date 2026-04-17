@@ -104,6 +104,7 @@ In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create
 ```ini
 cd Alptis-churn-prediction
 uv sync
+git switch <nom_branche_perso>
 ```
 4. Create a file, named `secret.yaml` in the root of the project with all your secrets variables, as followed: 
 ```
@@ -129,7 +130,7 @@ kubectl apply -f ./secret.yaml
 See the row "metadata" of the file:
 - name: put the name you want for the experiment
 - namespace: put your own name space here, it's the name in the top when you open the Argoworkflow service
->**Warning**: everytime you launch a new experiment, you have to choose a name of experiment you have not chosen yet, otherwise it will fail
+>**Warning**: everytime you launch a new experiment, you have to choose a name of experiment you have not chosen yet, otherwise it will fail (or delete the former experiment to use same name)
 
 7. Run the workflow in argoworkflow
 ```bash
