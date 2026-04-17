@@ -1,5 +1,5 @@
 training:
-  random_state: 42 #change the seed to have new random exp
+  random_state: None #fix the seed for reproductibility
   cv_folds: 5 #between 3 to 5
   n_optuna_trials: 50 #between 30-50
   use_smote: false

@@ -11,7 +11,7 @@ load_dotenv(override=True)
 #------------------------------------
 
 #name of experiment
-MLFLOW_EXPERIMENT_NAME= "kelly_training_with_30_variables_selected_manually"
+MLFLOW_EXPERIMENT_NAME= "kelly_training_complete_dataset_5_cv"
 
 #To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
 TRY_FEW_COLUMNS = False
@@ -23,33 +23,8 @@ COLUMNS_TO_KEEP = [
     "client_nps_churn_mention_n",
     "client_toujours_engage",
     "nb_jours_forfait_journalier",
-    "reste_a_charge_pharmacie",
-    "client_nps_note_reco_n",
-    "nb_decomptes_hospitalisation",
-    "nb_soins_optique",
-    "nb_decomptes_dentaire",
-    "courrier_est_escompte",
-    "interaction_service_suivi_du_contrat",
     "impaye_duree_max_action_jours",
-    "interaction_motif_autre",
-    "interaction_nb_transferts_gestion",
-    "remb_alptis_hospitalisation",
-    "courrier_segmentation_interne_VADISTE",
-    "nb_decomptes_pharmacie",
-    "nb_decomptes_divers",
-    "reste_a_charge_divers",
-    "interaction_nb_total",
-    "remb_alptis_divers",
-    "reste_a_charge_soins_medicaux",
-    "courrier_nb_affaires_n_mois1",
-    "client_departement",
-    "remb_alptis_pharmacie",
-    "courrier_code_partenaire",
-    "frais_reels_pharmacie",
-    "client_age_souscripteur",
-    "remb_alptis",
-    "client_cotisations_annualisees_n_plus1"
-]
+    "interaction_motif_autre"]
 
 #...or if you prefer just to select the variables to drop : 
 # put TRY_KEEP_FEW_VARIABLES to False
