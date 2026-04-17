@@ -188,11 +188,7 @@ def mlflow_run(cfg, best_params, best_cv, estimator, X_train, X_test, y_train, y
         if shap_info:
             mlflow.log_params(shap_info)
 
-        mlflow.sklearn.log_model(
-            estimator,
-            name=MODEL_NAME,
-            pip_requirements=["xgboost"],     
-        )
+        mlflow.sklearn.log_model( estimator.named_steps["model"],  MODEL_NAME, pip_requirements=[]   )
         pred  = estimator.predict(X_test)
         proba = estimator.predict_proba(X_test)[:, 1]
         report_path = output_dir / f"{MODEL_NAME}_report.txt"
