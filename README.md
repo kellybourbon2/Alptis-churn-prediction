@@ -169,6 +169,9 @@ Look at the demo_loading notebook to know how to load a file from SPPCloud (afte
 
 
 Dans branche dévelopement: 
+
+- data proceesing: tester fonction create_nps_feature (partie detect_churn_...) de dominique sur interaction_texte_mail
+
 - écrire des script avec missing_values laissées dans data preparation: en faisant attention a option fill missing values --> tester sur modeles robuste a missing values et voir si diff en terme de score +  Check si yaml ok selon les specificités de chaque modele
 
 EXPORT... les var mlflow pour tester rapidos script training
@@ -178,9 +181,9 @@ EXPORT... les var mlflow pour tester rapidos script training
 - Run plein d'argoworfklow en changeant le dataprocessing (ajout de variables, suppressions d'autres,...) + avec et sans clipping + avec sans smote, ... et tjrs en précisant dans le nom de l'expérience (mlflow/argoworkflow) changement faits sur dataprocessing
 
 - modeles interpretables: 
-extraire le meilleur random forest/logistique regression (cf roc auc) et charger modele enregistré dans artifact
---> log reg: etudier signe des coeff + p-value et générer un truc pour partie analysis of result
---> random forest: créer arbre de décision le + proche
+trouver le meilleur random forest/logistique regression (cf roc auc) du mlflow et charger ce modele enregistré dans artifact dans notebook pour générer des trucs pour partie analysis of result
+--> log reg: etudier signe des coeff + p-value etc
+--> random forest: créer arbre de décision le + proche etc
 
 
 ## Data processing
