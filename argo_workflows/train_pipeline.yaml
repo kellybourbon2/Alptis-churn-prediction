@@ -1,10 +1,12 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: argotestfinal
+    name: nouveautestpitieee
     namespace: user-kbourbon
 
+
 spec:
+  serviceAccountName: argo-workflows
   parallelism: 5
   entrypoint: pipeline
 
@@ -109,12 +111,6 @@ spec:
               name: env-secrets
               key: AWS_SESSION_TOKEN
 
-        - name: MLFLOW_TRACKING_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: env-secrets
-              key: MLFLOW_TRACKING_PASSWORD
-
       resources:
         requests:
           memory: "2Gi"
@@ -151,6 +147,12 @@ spec:
             secretKeyRef:
               name: env-secrets
               key: AWS_SESSION_TOKEN
+          
+        - name: MLFLOW_TRACKING_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: env-secrets
+              key: MLFLOW_TRACKING_PASSWORD
 
         - name: AWS_S3_ENDPOINT
           value: "minio-simple.lab.groupe-genes.fr"
@@ -166,6 +168,13 @@ spec:
 
         - name: MLFLOW_S3_IGNORE_TLS
           value: "true"
+        
+        - name: MLFLOW_DISABLE_UV_ENV_DETECTION
+          value: "true"
+
+        - name: MLFLOW_TRACKING_USERNAME
+          value: "projet-bdc-data"
+
 
       resources:
         requests:

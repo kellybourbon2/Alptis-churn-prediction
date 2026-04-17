@@ -1,51 +1,48 @@
 """
 CatBoost training 
 - CatBoost handles raw categoricals columns (no encoding needed)
---> to complete: need to precise which columns are categoricals and which are not to catboost
+- Auto-detects categorical columns from DataFrame dtypes
 """
 
 # ── Imports ───────────────────────────────────────────────────────────────────
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[2])) #so see src
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import time
 import os
-os.chdir("src/models")  # to avoid pyproject to be detected by mlflow
+os.chdir("src/models")
 
-os.environ["MLFLOW_TRACKING_URI"]      = "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
-os.environ["MLFLOW_S3_ENDPOINT_URL"]   = "https://minio-simple.lab.groupe-genes.fr"
+os.environ["MLFLOW_TRACKING_URI"]          = "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+os.environ["MLFLOW_S3_ENDPOINT_URL"]       = "https://minio-simple.lab.groupe-genes.fr"
 os.environ["MLFLOW_TRACKING_INSECURE_TLS"] = "true"
-os.environ["MLFLOW_S3_IGNORE_TLS"]     = "true"
+os.environ["MLFLOW_S3_IGNORE_TLS"]        = "true"
+os.environ["MLFLOW_DISABLE_ENV_CREATION"] = "true"
+os.environ["MLFLOW_UV_DISABLE"]           = "1"
 
 import warnings
 import numpy as np
 import pandas as pd
-
-os.environ["MLFLOW_DISABLE_ENV_CREATION"] = "true" #to avoid inference of mlflow
-os.environ["MLFLOW_UV_DISABLE"] = "1" #to avoid inference of mlflow
-
 import mlflow
 import mlflow.catboost
 import optuna
 import yaml
-from pathlib import Path
-from dataclasses import dataclass
-from catboost import CatBoostClassifier, Pool, cv as catboost_cv
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split, StratifiedKFold
+import shap
+from catboost import CatBoostClassifier
+from sklearn.base import clone
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import (
     roc_auc_score, average_precision_score, f1_score,
-    classification_report, confusion_matrix, matthews_corrcoef,
+    precision_score, recall_score, classification_report, confusion_matrix
 )
-
-import shap
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.over_sampling import SMOTE
 
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 from src.data_processing.data_load import load_data_processed_from_S3
-from Config import MLFLOW_EXPERIMENT_NAME
+from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING
 
 MODEL_NAME = "catboost"
 
@@ -58,6 +55,44 @@ def load_config(path="config/training_config.yaml") -> dict:
     cfg.update(raw["models"][MODEL_NAME])
     cfg["optuna"] = raw["optuna"]
     return cfg
+
+
+# ── CatBoost wrapper ──────────────────────────────────────────────────────────
+
+class CatBoostAutoCat(CatBoostClassifier):
+    """
+    CatBoost that:
+    - auto-detects categorical features from DataFrame dtypes
+    - converts category dtype → object (avoids Pool dtype mismatch at inference)
+    - fills NaN in cat columns with '__missing__'
+    - is clone()-safe (no cat_features in constructor)
+    """
+
+    def _prepare_X(self, X):
+        cat_features = X.select_dtypes(include=["object", "category", "string"]).columns.tolist()
+        X = X.copy()
+        for col in cat_features:
+            # Convert category → str first (handles NaN as "nan")
+            X[col] = X[col].astype(str).replace("nan", "__missing__").fillna("__missing__")
+        return X, cat_features
+
+    def fit(self, X, y=None, **fit_params):
+        X, cat_features = self._prepare_X(X)
+        fit_params["cat_features"] = cat_features
+        return super().fit(X, y, **fit_params)
+
+    def predict(self, X, **kwargs):
+        X, _ = self._prepare_X(X)
+        return super().predict(X, **kwargs)
+
+    def predict_proba(self, X, **kwargs):
+        X, _ = self._prepare_X(X)
+        return super().predict_proba(X, **kwargs)
+
+    def get_params(self, deep=True):
+        params = super().get_params(deep=deep)
+        params.pop("cat_features", None)
+        return params
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -74,34 +109,37 @@ def evaluate(model, X, y, prefix=""):
     }
 
 
-def cv_score(estimator, X, y, cfg: dict, scoring="average_precision"):
+def cv_score(estimator, X, y, cfg: dict):
+    """Manual CV"""
     cv = StratifiedKFold(n_splits=cfg["cv_folds"], shuffle=True, random_state=cfg["random_state"])
-    scores = cross_val_score(estimator, X, y, cv=cv, scoring=scoring, n_jobs=-1)
-    return scores.mean()
+    scores = []
+
+    for train_idx, val_idx in cv.split(X, y):
+        X_tr  = X.iloc[train_idx]
+        X_val = X.iloc[val_idx]
+        y_tr  = y[train_idx]
+        y_val = y[val_idx]
+
+        fold_pipe = clone(estimator)
+        fold_pipe.fit(X_tr, y_tr)
+
+        proba = fold_pipe.predict_proba(X_val)[:, 1]
+        scores.append(average_precision_score(y_val, proba))
+
+    return np.mean(scores)
 
 
 def get_model(params: dict, cfg: dict):
-
-    return CatBoostClassifier(
+    return CatBoostAutoCat(
         **params,
-
-        # core
         loss_function=cfg["loss_function"],
         eval_metric=cfg["eval_metric"],
-
-        # imbalance
         auto_class_weights=cfg["auto_class_weights"],
-
-        # early stopping (CatBoost style)
         od_type="Iter",
         od_wait=cfg["early_stopping_round"],
         use_best_model=cfg["use_best_model"],
-
-        # reproductibility
         random_seed=cfg["random_state"],
         verbose=cfg["verbose"],
-
-        # GPU / CPU
         task_type=cfg["task_type"],
     )
 
@@ -115,16 +153,14 @@ def build_pipeline(estimator, cfg: dict):
 
 
 # ── Optuna ────────────────────────────────────────────────────────────────────
+
 def get_search_space(trial, o: dict):
     return {
-        "iterations": trial.suggest_int("iterations", o["max_iter_min"], o["max_iter_max"]),
-        "depth": trial.suggest_int("depth", o["max_depth_min"], o["max_depth_max"]),
-        "learning_rate": trial.suggest_float("learning_rate", o["lr_min"], o["lr_max"], log=True),
-
-        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", o["l2_reg_min"], o["l2_reg_max"], log=True),
-
-        "random_strength": trial.suggest_float("random_strength", 0, 2),
-
+        "iterations":          trial.suggest_int("iterations", o["max_iter_min"], o["max_iter_max"]),
+        "depth":               trial.suggest_int("depth", o["max_depth_min"], o["max_depth_max"]),
+        "learning_rate":       trial.suggest_float("learning_rate", o["lr_min"], o["lr_max"], log=True),
+        "l2_leaf_reg":         trial.suggest_float("l2_leaf_reg", o["l2_reg_min"], o["l2_reg_max"], log=True),
+        "random_strength":     trial.suggest_float("random_strength", 0, 2),
         "bagging_temperature": trial.suggest_float("bagging_temperature", 0, 1),
     }
 
@@ -177,7 +213,6 @@ def mlflow_run(cfg, best_params, best_cv, estimator, X_train, X_test, y_train, y
         mlflow.log_param("n_optuna_trials", cfg["n_optuna_trials"])
         mlflow.log_param("use_smote",       cfg["use_smote"])
         mlflow.log_param("data_suffix",     cfg["data_suffix"])
-
         mlflow.log_metric(f"cv_{cfg['primary_metric']}", best_cv)
 
         train_m = evaluate(estimator, X_train, y_train, prefix="train_")
@@ -190,7 +225,8 @@ def mlflow_run(cfg, best_params, best_cv, estimator, X_train, X_test, y_train, y
         if shap_info:
             mlflow.log_params(shap_info)
 
-        mlflow.sklearn.log_model(estimator.named_steps["model"], MODEL_NAME, )
+        # log model
+        mlflow.catboost.log_model(estimator.named_steps["model"], MODEL_NAME)
 
         pred  = estimator.predict(X_test)
         proba = estimator.predict_proba(X_test)[:, 1]
@@ -216,7 +252,7 @@ def main():
     Path(cfg["output_dir"]).mkdir(exist_ok=True)
 
     print("\n" + "="*60)
-    print("HistGradientBoosting training ...")
+    print("CatBoost training ...")
     print("="*60 + "\n")
 
     suffix  = cfg["data_suffix"]
@@ -225,16 +261,11 @@ def main():
     X_test  = load_data_processed_from_S3(f"X_test_{suffix}")
     y_test  = load_data_processed_from_S3(f"y_test_{suffix}").values
 
-    
-    #Load or create experiment with name and uri defined in .env
     mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
     experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
     if experiment is None:
-        mlflow.create_experiment(
-            MLFLOW_EXPERIMENT_NAME,
-            artifact_location=S3_BUCKET_ARTIFACT_TRAINING
-        )
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)  
+        mlflow.create_experiment(MLFLOW_EXPERIMENT_NAME, artifact_location=S3_BUCKET_ARTIFACT_TRAINING)
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
     print(f"  Optuna HPO ({cfg['n_optuna_trials']} trials) …")
     t0 = time.perf_counter()
@@ -243,7 +274,7 @@ def main():
 
     est  = get_model(best_params, cfg)
     pipe = build_pipeline(est, cfg)
-    pipe.fit(X_train, y_train,  eval_set=(X_test, y_test))
+    pipe.fit(X_train, y_train)
     elapsed = time.perf_counter() - t0
     print(f"  Training done in {elapsed:.1f}s")
 
