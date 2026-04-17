@@ -7,11 +7,11 @@ import pandas as pd
 # Load variables from secret file
 load_dotenv(override=True)
 
-#------MODEL EXPERIMENT --------------
+#------TRAINING EXPERIMENT --------------
 #------------------------------------
 
 #name of experiment
-MLFLOW_EXPERIMENT_NAME= "kelly_training_with_30_variables"
+MLFLOW_EXPERIMENT_NAME= "kelly_training_with_30_variables_selected_manually"
 
 #To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
 TRY_FEW_COLUMNS = True

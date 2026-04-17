@@ -81,15 +81,31 @@ We've tested different models of training :
 
 # How to create an Argo-Workflow experiment on Onyxia:
 
-1. Create an argoworkflow service
-2. Create a VSCode service
-⚠️ **Very important**: Select "Admin" role for the VSCode service, otherwise can't use argoworkflow
+## First you need to specify the variables you want on this experiment
+1. Open Config.py file
+2. Change the first 4 variables of MODEL_EXPERIMENT part as you want
+
+- If you want only want to keep a list of selected variables from the dataset:
+TRY_FEW_COLUMNS = True
+COLUMNS_TO_KEEP = [] #put the columns you want to keep here
+
+- If you just want to drop some variables from the dataset: 
+TRY_FEW_COLUMNS = False
+COLUMNS_TO_DROP = [] #put the columns you want to drop here
+
+In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create 
+
+## Then you can you create the argoworkflow experiment
+
+1. Create an argoworkflow service (on Onyxia Genes or SSPCloud, whatever)
+2. Create a VSCode service 
+⚠️ **Very important**: Select the "Admin" role for the VSCode service, otherwise you can't use argoworkflow with this VsCode
 3. Clone the projet in VSCode service, and do as usual in terminal: 
 ```ini
 cd Alptis-churn-prediction
 uv sync
 ```
-4. Create in a file, named `secret.yaml` with all your secrets variables, in the root of the project, as followed: 
+4. Create a file, named `secret.yaml` in the root of the project with all your secrets variables, as followed: 
 ```
 apiVersion: v1
 kind: Secret
@@ -102,6 +118,9 @@ stringData:
   AWS_SESSION_TOKEN: ....
   MLFLOW_TRACKING_PASSWORD: ....
 ```
+>You can find AWS variables on Oxyxia Genes, in Mon Compte > Connection au Stockage
+>To find MLFLOW_TRACKING_PASSWORD: Mes Services > Projet: projet-bdc-data > Service partagé "Alptis-churn-mlflow-g2": ouvrir ce service et copier le mot de passe
+
 5. Pass this secrets to the kubernetes cluster: 
 ```bash
 kubectl apply -f ./secret.yaml
@@ -109,7 +128,7 @@ kubectl apply -f ./secret.yaml
 6. Change the namespace and the name of the argoworkflow in file `argo_workflows/train_pipeline.yaml`
 See the row "metadata" of the file:
 - name: put the name you want for the experiment
-- namespace: put your own name space here
+- namespace: put your own name space here, it's the name in the top when you open the Argoworkflow service
 >**Warning**: everytime you launch a new experiment, you have to choose a name of experiment you have not chosen yet, otherwise it will fail
 
 7. Run the workflow in argoworkflow
@@ -117,7 +136,8 @@ See the row "metadata" of the file:
 kubectl apply -f argo_workflows/train_pipeline.yaml
 ```
 8. Open the server argoworkflow you created earlier to visualise the workflow
-9. You can visualise the results of the experiment in Onyxia Genes > Projet : "projet-bdc-alptis" > Service named "Alptis-churn-mlflow-g2"
+
+9. You can visualise the results of the experiment (roc-auc, precision, ... of each model) in Onyxia Genes > Projet : "projet-bdc-alptis" > Service named "Alptis-churn-mlflow-g2"
 
 CONGRATULATIONS!!!
 

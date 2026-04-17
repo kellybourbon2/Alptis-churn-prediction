@@ -182,9 +182,9 @@ class DataProcessor:
 
         # Step 8: Drop useless columns
         if TRY_FEW_COLUMNS:
-            cols_to_drop = [col for col in df.columns if col not in COLUMNS_TO_KEEP]
+            cols_to_drop = [col for col in df.columns if col not in COLUMNS_TO_KEEP and col not in ["client_code","target_resiliaion_6mois"]]
         else: 
-            cols_to_drop = [col for col in df.columns if col.startswith(self.files_to_drop) or col in self.columns_to_drop]
+            cols_to_drop = [col for col in df.columns if col.startswith(self.files_to_drop) or col in self.columns_to_drop if col not in ["client_code","target_resiliaion_6mois"] ]
         
         df = df.drop(columns=cols_to_drop, errors="ignore")
         logger.info(f"Dropped columns from dataset: {cols_to_drop}")
