@@ -81,9 +81,15 @@ We've tested different models of training :
 
 # How to create an Argo-Workflow experiment on Onyxia:
 
-⚠️ **Very important**: create a VSCode with "Admin" role selected and then clone the project in it. 
-
-1. Create in a file, named `secret.yaml` with all your secrets variables, in the root of the project, as followed: 
+1. Create an argoworkflow service
+2. Create a VSCode service
+⚠️ **Very important**: Select "Admin" role for the VSCode service, otherwise can't use argoworkflow
+3. Clone the projet in VSCode service, and do as usual in terminal: 
+```ini
+cd Alptis-churn-prediction
+uv sync
+```
+4. Create in a file, named `secret.yaml` with all your secrets variables, in the root of the project, as followed: 
 ```
 apiVersion: v1
 kind: Secret
@@ -96,18 +102,24 @@ stringData:
   AWS_SESSION_TOKEN: ....
   MLFLOW_TRACKING_PASSWORD: ....
 ```
-2. Pass the secrets to the kubernetes cluster: 
+5. Pass this secrets to the kubernetes cluster: 
 ```bash
 kubectl apply -f ./secret.yaml
 ```
-3. Change the namespace and the name of the argoworkflow (argoworkflow can not work if the name is already used) in file `argo_workflows/train_pipeline.yaml`
---> see row "metadata" with namespace and name of argoworkflow
+6. Change the namespace and the name of the argoworkflow in file `argo_workflows/train_pipeline.yaml`
+See the row "metadata" of the file:
+- name: put the name you want for the experiment
+- namespace: put your own name space here
+>**Warning**: everytime you launch a new experiment, you have to choose a name of experiment you have not chosen yet, otherwise it will fail
 
-4. Run the workflow in argoworkflow
+7. Run the workflow in argoworkflow
 ```bash
 kubectl apply -f argo_workflows/train_pipeline.yaml
 ```
-5. Open the server argoworkflow to visualise the workflow
+8. Open the server argoworkflow you created earlier to visualise the workflow
+9. You can visualise the results of the experiment in Onyxia Genes > Projet : "projet-bdc-alptis" > Service named "Alptis-churn-mlflow-g2"
+
+CONGRATULATIONS!!!
 
 ## To do a a specific modle training and track results on MLFLOW
 

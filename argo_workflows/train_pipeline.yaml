@@ -1,8 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testargo2kelly
-    namespace: user-kbourbon
+    name: testargo2kelly #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMSPACE
 
 spec:
   serviceAccountName: argo-workflows
