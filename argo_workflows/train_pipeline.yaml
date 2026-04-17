@@ -1,9 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: nouveautestpitieee
+    name: testargo
     namespace: user-kbourbon
-
 
 spec:
   serviceAccountName: argo-workflows
@@ -64,14 +63,23 @@ spec:
               - name: script
                 value: "src/models/train_histgb.py"
 
-        # CatBoost (noenc_nonorm)
-        - name: train-catboost
-          dependencies: [prepare-data-no-enc-no-norm]
+        #TEMPORARY: catboost on encoded data
+        - name: train-catboost 
+          dependencies: [prepare-data-enc-no-norm]
           template: train
           arguments:
             parameters:
               - name: script
                 value: "src/models/train_catboost.py"
+
+        - name: train-random-forest
+          dependencies: [prepare-data-enc-no-norm]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_random_forest.py"
+
 
         # Logistic Regression (enc_norm)
         - name: train-logistic-regression
