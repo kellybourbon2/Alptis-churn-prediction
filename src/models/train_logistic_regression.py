@@ -109,18 +109,27 @@ def build_pipeline(estimator, cfg):
 
 # ── OPTUNA ─────────────────────────────────────────────
 
-def get_search_space(trial):
-    return {
-        "C": trial.suggest_float("C", 1e-4, 100, log=True),
-        "penalty": trial.suggest_categorical("penalty", ["l1", "l2"]),
-        "l1_ratio": trial.suggest_float("l1_ratio", 0.0, 1.0)
+def get_search_space(trial, o):
+    penalty = trial.suggest_categorical("penalty", o["penalty"])
+    
+    params = {
+        "C":       trial.suggest_float("C", o["C_min"], o["C_max"], log=True),
+        "penalty": penalty,
+        "tol":     trial.suggest_float("tol", o["tol_min"], o["tol_max"], log=True),
     }
-
+    
+    # l1_ratio only relevant for elasticnet
+    if penalty == "elasticnet":
+        params["l1_ratio"] = trial.suggest_float("l1_ratio", o["l1_ratio_min"], o["l1_ratio_max"])
+    
+    return params
 
 def run_optuna(X_train, y_train, cfg):
 
+    o = cfg["optuna"]["logistic_regression"] #retrieve optuna search space hyperparam
+
     def objective(trial):
-        params = get_search_space(trial)
+        params = get_search_space(trial, o)
         model = get_model(params, cfg)
         pipe = build_pipeline(model, cfg)
         return cv_score(pipe, X_train, y_train, cfg)

@@ -99,33 +99,28 @@ def build_pipeline(estimator, cfg):
 
 
 # ── OPTUNA ─────────────────────────────────────────────
-
-def get_search_space(trial):
+def get_search_space(trial, o):
     bootstrap = trial.suggest_categorical("bootstrap", [True, False])
 
     params = {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 1000),
-        "max_depth": trial.suggest_int("max_depth", 4, 24),
-        "min_samples_split": trial.suggest_int("min_samples_split", 2, 30),
-        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 15),
-        "max_features": trial.suggest_categorical(
-            "max_features",
-            ["sqrt", "log2", 0.3, 0.5, 0.7, None]
-        ),
-        "bootstrap": bootstrap,
+        "n_estimators":     trial.suggest_int("n_estimators", o["n_estimators_min"], o["n_estimators_max"]),
+        "max_depth":        trial.suggest_int("max_depth", o["max_depth_min"], o["max_depth_max"]),
+        "min_samples_leaf": trial.suggest_int("min_samples_leaf", o["min_samples_leaf_min"], o["min_samples_leaf_max"]),
+        "min_samples_split":trial.suggest_int("min_samples_split", o["min_samples_split_min"], o["min_samples_split_max"]),
+        "max_features":     trial.suggest_categorical("max_features", o["max_features"]),
+        "bootstrap":        bootstrap,
     }
 
     if bootstrap:
-        params["max_samples"] = trial.suggest_float(
-            "max_samples", 0.5, 1.0
-        )
+        params["max_samples"] = trial.suggest_float("max_samples", o["max_samples_min"], o["max_samples_max"])
 
     return params
 
 def run_optuna(X_train, y_train, cfg):
+    o = cfg["optuna"]["random_forest"]
 
     def objective(trial):
-        params = get_search_space(trial)
+        params = get_search_space(trial, o)
         model = get_model(params, cfg)
         pipe = build_pipeline(model, cfg)
         return cv_score(pipe, X_train, y_train, cfg)

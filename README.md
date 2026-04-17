@@ -62,12 +62,21 @@ Located in `src/data_processing/`, the preprocessing module handles data cleanin
 - **`aggregation.py`**: Aggregates secondary files (reclamations, consumptions, interactions, overdue payments) at the client level
 - **`feature_engineering.py`**: Handles the creation of the new variables (courtier_anciennete_categories, client_age_categories, ...)
 - **`data_external.py`**: Handles the integration of external variables (revenue of commune in 2021 from Insee, ...)
-- **`prepare_data.py`**: Pipeline script that handles the data processsing, the train/test datasets preparation and the saving of the pre-processed datasets in S3 Storage (same as the one from Data Loading). The bucket for the storing in S3 can be changes with the variable `S3_DATA_PROCESSED_BUCKET` in `Config`.
 
+## Data preparation
+## Data Preparation
+
+- **`prepare_data_enc_norm.py`**, **`prepare_data_noenc_norm.py`**, and **`prepare_data_enc_nonorm.py`**: pipeline scripts that handle:
+  - data preprocessing according to the selected parameters (e.g. encoding with normalization, encoding without normalization, etc.)
+  - preparation of the train/test datasets
+  - saving the preprocessed datasets to S3 storage (same environment as used in the Data Loading step)
+
+**Note**: The destination S3 bucket can be modified through the variable `S3_DATA_PROCESSED_BUCKET` in `Config`.
 ## Training
 
+## Model training
 We've tested different models of training 
-...
+
 
 ## To do a Training and track results on MLFLOW
 Once you defined in your branch all the changes (on the data processing and on the model config):
@@ -78,7 +87,7 @@ Once you defined in your branch all the changes (on the data processing and on t
 MLFLOW_TRACKING_USERNAME=projet-bdc-data
 MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
 MLFLOW_TRACKING_PASSWORD=... 
-MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
+MLFLOW_S3_ENDPOINT_URL=https://minio-simple.lab.groupe-genes.fr
 ```
 >Paste the password saved in step 1
 3. Run the model you want in terminal (*ex: uv run python train_xgboost.py*)

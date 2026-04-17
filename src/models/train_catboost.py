@@ -58,42 +58,39 @@ def load_config(path="config/training_config.yaml") -> dict:
 
 
 # ── CatBoost wrapper ──────────────────────────────────────────────────────────
+from catboost import CatBoostClassifier, Pool
 
 class CatBoostAutoCat(CatBoostClassifier):
-    """
-    CatBoost that:
-    - auto-detects categorical features from DataFrame dtypes
-    - converts category dtype → object (avoids Pool dtype mismatch at inference)
-    - fills NaN in cat columns with '__missing__'
-    - is clone()-safe (no cat_features in constructor)
-    """
 
-    def _prepare_X(self, X):
-        cat_features = X.select_dtypes(include=["object", "category", "string"]).columns.tolist()
+    def _prepare_X(self, X, cat_features=None):
+        if cat_features is None:
+            cat_features = X.select_dtypes(include=["object", "category", "string"]).columns.tolist()
         X = X.copy()
         for col in cat_features:
-            # Convert category → str first (handles NaN as "nan")
             X[col] = X[col].astype(str).replace("nan", "__missing__").fillna("__missing__")
         return X, cat_features
 
     def fit(self, X, y=None, **fit_params):
         X, cat_features = self._prepare_X(X)
-        fit_params["cat_features"] = cat_features
-        return super().fit(X, y, **fit_params)
+        self._cat_features_fitted = cat_features
+        pool = Pool(X, label=y, cat_features=cat_features)
+        fit_params.pop("cat_features", None)  # avoid duplicate kwarg
+        return super().fit(pool, **fit_params)
+
+    def _to_pool(self, X):
+        X, _ = self._prepare_X(X, cat_features=self._cat_features_fitted)
+        return Pool(X, cat_features=self._cat_features_fitted)
 
     def predict(self, X, **kwargs):
-        X, _ = self._prepare_X(X)
-        return super().predict(X, **kwargs)
+        return super().predict(self._to_pool(X), **kwargs)
 
     def predict_proba(self, X, **kwargs):
-        X, _ = self._prepare_X(X)
-        return super().predict_proba(X, **kwargs)
+        return super().predict_proba(self._to_pool(X), **kwargs)
 
     def get_params(self, deep=True):
         params = super().get_params(deep=deep)
         params.pop("cat_features", None)
         return params
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -154,19 +151,20 @@ def build_pipeline(estimator, cfg: dict):
 
 # ── Optuna ────────────────────────────────────────────────────────────────────
 
-def get_search_space(trial, o: dict):
+def get_search_space(trial, o):
     return {
-        "iterations":          trial.suggest_int("iterations", o["max_iter_min"], o["max_iter_max"]),
-        "depth":               trial.suggest_int("depth", o["max_depth_min"], o["max_depth_max"]),
-        "learning_rate":       trial.suggest_float("learning_rate", o["lr_min"], o["lr_max"], log=True),
-        "l2_leaf_reg":         trial.suggest_float("l2_leaf_reg", o["l2_reg_min"], o["l2_reg_max"], log=True),
-        "random_strength":     trial.suggest_float("random_strength", 0, 2),
-        "bagging_temperature": trial.suggest_float("bagging_temperature", 0, 1),
+        "iterations":         trial.suggest_int("iterations", o["iterations_min"], o["iterations_max"]),
+        "depth":              trial.suggest_int("depth", o["depth_min"], o["depth_max"]),
+        "learning_rate":      trial.suggest_float("learning_rate", o["lr_min"], o["lr_max"], log=True),
+        "l2_leaf_reg":        trial.suggest_float("l2_leaf_reg", o["l2_reg_min"], o["l2_reg_max"], log=True),
+        "bagging_temperature": trial.suggest_float("bagging_temperature", o["bagging_temperature_min"], o["bagging_temperature_max"]),
+        "random_strength":    trial.suggest_float("random_strength", o["random_strength_min"], o["random_strength_max"]),
+        "border_count":       trial.suggest_int("border_count", o["border_count_min"], o["border_count_max"]),
     }
 
 
 def run_optuna(X_train, y_train, cfg: dict):
-    o = cfg["optuna"]
+    o = cfg["optuna"]["catboost"]
 
     def objective(trial):
         params = get_search_space(trial, o)

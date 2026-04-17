@@ -110,7 +110,7 @@ def get_search_space(trial, o: dict):
 
 
 def run_optuna(X_train, y_train, cfg: dict):
-    o = cfg["optuna"]
+    o = cfg["optuna"]["histgb"]
 
     def objective(trial):
         params = get_search_space(trial, o)
