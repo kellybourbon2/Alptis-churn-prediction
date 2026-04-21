@@ -1,7 +1,7 @@
 training:
   random_state: 42 #fix the seed for reproductibility
-  cv_folds: 4 #between 3 to 5
-  n_optuna_trials: 40 #between 30-50
+  cv_folds: 2 #between 3 to 5
+  n_optuna_trials: 1 #between 30-50
   use_smote: false
   primary_metric: "pr_auc"
   output_dir: "artifacts"
