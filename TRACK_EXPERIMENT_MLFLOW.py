@@ -38,3 +38,8 @@ COLUMNS_TO_KEEP = [
 MLFLOW_EXPERIMENT_NAME= "kelly_training_complete_dataset_5_cv"
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
+
+
+MLFLOW_EXPERIMENT_NAME= "hka_training_drop_geo_no_bertopic"
+COLUMNS_TO_DROP = ["client_code_postal", "client_departement" #car on ajoute le revenu médian commune à la place
+                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
