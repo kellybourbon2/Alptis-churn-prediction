@@ -1,23 +1,46 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  name: data-prep-training-pipeline
-  namespace: argo
+    name: testargokelly2 #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMESPACE 
 
 spec:
+  serviceAccountName: argo-workflows
   parallelism: 5
   entrypoint: pipeline
 
   templates:
 
+  # ─────────────────────── ENTRYPOINT ────────────────────────────
   - name: pipeline
     dag:
       tasks:
-        - name: prepare-data
-          template: prepare-data
 
+        # Data preparation (parallel)
+        - name: prepare-data-no-enc-no-norm
+          template: prepare-data
+          arguments:
+            parameters:
+              - name: script
+                value: "src/data_preparation/prepare_data_noenc_nonorm.py"
+
+        - name: prepare-data-enc-no-norm
+          template: prepare-data
+          arguments:
+            parameters:
+              - name: script
+                value: "src/data_preparation/prepare_data_enc_nonorm.py"
+
+        - name: prepare-data-enc-norm
+          template: prepare-data
+          arguments:
+            parameters:
+              - name: script
+                value: "src/data_preparation/prepare_data_enc_norm.py"
+
+        # Boosting models (enc_nonorm)
         - name: train-xgboost
-          dependencies: [prepare-data]
+          dependencies: [prepare-data-enc-no-norm]
           template: train
           arguments:
             parameters:
@@ -25,7 +48,7 @@ spec:
                 value: "src/models/train_xgboost.py"
 
         - name: train-lightgbm
-          dependencies: [prepare-data]
+          dependencies: [prepare-data-enc-no-norm]
           template: train
           arguments:
             parameters:
@@ -33,20 +56,50 @@ spec:
                 value: "src/models/train_lightgbm.py"
 
         - name: train-histgb
-          dependencies: [prepare-data]
+          dependencies: [prepare-data-enc-no-norm]
           template: train
           arguments:
             parameters:
               - name: script
                 value: "src/models/train_histgb.py"
 
-  # ─────────────────────── DATA PREP ─────────────────────────────
+        #TEMPORARY: catboost on encoded data
+        - name: train-catboost 
+          dependencies: [prepare-data-enc-no-norm]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_catboost.py"
+
+        - name: train-random-forest
+          dependencies: [prepare-data-enc-no-norm]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_random_forest.py"
+
+
+        # Logistic Regression (enc_norm)
+        - name: train-logistic-regression
+          dependencies: [prepare-data-enc-norm]
+          template: train
+          arguments:
+            parameters:
+              - name: script
+                value: "src/models/train_logistic_regression.py"
+
+  # ─────────────────────── DATA PREP TEMPLATE ────────────────────
   - name: prepare-data
+    inputs:
+      parameters:
+        - name: script
     container:
-      image: kellybrbn/bdc-alptis:data_preparation
+      image: kellybrbn/bdc-alptis:latest
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
-      args: ["src/data_processing/prepare_data.py"]
+      args: ["{{inputs.parameters.script}}"]
       env:
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
@@ -59,13 +112,12 @@ spec:
             secretKeyRef:
               name: env-secrets
               key: AWS_SECRET_ACCESS_KEY
+
         - name: AWS_SESSION_TOKEN
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SESSION_TOKEN
-        - name: AWS_S3_ENDPOINT
-          value: "minio-simple.lab.groupe-genes.fr"
 
       resources:
         requests:
@@ -81,7 +133,7 @@ spec:
       parameters:
         - name: script
     container:
-      image: kellybrbn/bdc-alptis:training
+      image: kellybrbn/bdc-alptis:latest
       imagePullPolicy: Always
       command: ["uv", "run", "python"]
       args: ["{{inputs.parameters.script}}"]
@@ -91,18 +143,47 @@ spec:
             secretKeyRef:
               name: env-secrets
               key: AWS_ACCESS_KEY_ID
+
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SECRET_ACCESS_KEY
+
         - name: AWS_SESSION_TOKEN
           valueFrom:
             secretKeyRef:
               name: env-secrets
               key: AWS_SESSION_TOKEN
+          
+        - name: MLFLOW_TRACKING_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: env-secrets
+              key: MLFLOW_TRACKING_PASSWORD
+
         - name: AWS_S3_ENDPOINT
           value: "minio-simple.lab.groupe-genes.fr"
+
+        - name: MLFLOW_TRACKING_URI
+          value: "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: "https://minio-simple.lab.groupe-genes.fr"
+
+        - name: MLFLOW_TRACKING_INSECURE_TLS
+          value: "true"
+
+        - name: MLFLOW_S3_IGNORE_TLS
+          value: "true"
+        
+        - name: MLFLOW_DISABLE_UV_ENV_DETECTION
+          value: "true"
+
+        - name: MLFLOW_TRACKING_USERNAME
+          value: "projet-bdc-data"
+
+
       resources:
         requests:
           memory: "1Gi"
