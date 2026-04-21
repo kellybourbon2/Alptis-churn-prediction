@@ -30,7 +30,7 @@ COLUMNS_TO_KEEP = [
 # put TRY_KEEP_FEW_VARIABLES to False
 #and modify below list:
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
-                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
+                   "client_structure_familiale", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 
 #-----------------------------------------------
@@ -78,7 +78,9 @@ HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
 #to avoid discrepancies test-training because not same categories
 FIXED_CATEGORIES = {
-    "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], }
+    "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], 
+    "interaction_motif": ['interaction_motif_adhesion', 'interaction_motif_ajout_d_un_ayant_droit', 'interaction_motif_ajout_de_garanties', 'interaction_motif_audioprothese', 'interaction_motif_augmentation_de_garanties', 'interaction_motif_autre', 'interaction_motif_ayants-droit', 'interaction_motif_baisse_de_garanties', 'interaction_motif_changement_de_statut', 'interaction_motif_cures_thermales', 'interaction_motif_deces', 'interaction_motif_demande_de_documents', 'interaction_motif_demande_de_radiation_mais_souhaite_une_etude', 'interaction_motif_demandes_generales', 'interaction_motif_dentaire', 'interaction_motif_dependance', 'interaction_motif_donnees_administratives', 'interaction_motif_frais_courants', 'interaction_motif_garanties_associees', 'interaction_motif_hospitalisation', 'interaction_motif_indemnites_journalieres', 'interaction_motif_madelin', 'interaction_motif_medecine_douce', 'interaction_motif_modalites_de_reglement', 'interaction_motif_modification_de_garantie', 'interaction_motif_montant_des_cotisations', 'interaction_motif_optique', 'interaction_motif_recouvrement', 'interaction_motif_rente_d_invalidite', 'interaction_motif_resiliation', 'interaction_motif_soins_a_l_etranger_(dont_suisse)', 'interaction_motif_teletransmission', 'interaction_motif_tiers_payant']
+        }
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
