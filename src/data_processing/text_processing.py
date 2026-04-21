@@ -25,14 +25,18 @@ def create_nps_features(df):
     """
     # 1. Create a variable of NPS category (passive, promotor, detractor)
     def nps_category(score):
-        if pd.isna(score):
-            return None
+        if score == 999:
+            return "No_answer"
         elif score <= 6:
             return "detractor"
         elif score <= 8:
             return "passive"
-        else:
+        elif score <= 10:
             return "promoter"
+        else:
+            return None
+         
+
 
     df["client_nps_category_n"] = df["client_nps_note_reco_n"].apply(nps_category)
 
