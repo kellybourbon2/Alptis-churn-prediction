@@ -5,6 +5,7 @@ data/*
 
 #artifacts models
 artifacts/ 
+catboost_info/
 
 #ignore version
 *=

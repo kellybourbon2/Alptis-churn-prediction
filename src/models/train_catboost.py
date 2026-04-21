@@ -189,12 +189,17 @@ def run_optuna(X_train, y_train, cfg: dict):
 
 def compute_shap(estimator, X_sample):
     raw = estimator.named_steps["model"]
+    
+    # Use the model's prepared Pool to ensure categorical features are handled correctly
+    pool_sample = raw._to_pool(X_sample)
+    
     explainer = shap.TreeExplainer(raw)
-    vals = explainer(X_sample)
+    vals = explainer(pool_sample)
     mean_abs = np.abs(vals.values).mean(axis=0)
     top20 = np.argsort(mean_abs)[::-1][:20]
     feature_names = list(X_sample.columns) if hasattr(X_sample, "columns") else [str(i) for i in range(X_sample.shape[1])]
     return {f"shap_top_feat_{i+1}": feature_names[top20[i]] for i in range(20)}
+
 
 
 # ── MLflow ────────────────────────────────────────────────────────────────────
