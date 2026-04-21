@@ -38,6 +38,8 @@ from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 
 from src.data_processing.data_load import load_data_processed_from_S3
+from model_saving import save_model_to_s3
+from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING
 
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -228,6 +230,9 @@ def main():
     model = get_model(best_params, cfg)
     pipe = build_pipeline(model, cfg)
     pipe.fit(X_train, y_train)
+
+    print("Training done!")
+    save_model_to_s3(pipe, MODEL_NAME)
 
     elapsed = time.perf_counter() - t0
 

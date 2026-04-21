@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testargo2 #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    name: testargocomplete #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
     namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMESPACE 
 
 spec:

@@ -43,6 +43,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 from src.data_processing.data_load import load_data_processed_from_S3
 from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING
+from model_saving import save_model_to_s3
 
 MODEL_NAME = "histgb"
 
@@ -226,6 +227,8 @@ def main():
     pipe.fit(X_train, y_train)
     elapsed = time.perf_counter() - t0
     print(f"  Training done in {elapsed:.1f}s")
+    save_model_to_s3(pipe, MODEL_NAME)
+
 
     row = mlflow_run(cfg, best_params, best_cv, pipe, X_train, X_test, y_train, y_test, elapsed)
     print(f"  Test ROC-AUC={row['test_roc_auc']:.4f} | PR-AUC={row['test_pr_auc']:.4f}")
