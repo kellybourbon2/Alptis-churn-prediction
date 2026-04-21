@@ -1,11 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testargowork #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    name: testpls #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
     namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMESPACE 
 
 spec:
-  serviceAccountName: argo-workflows
+  serviceAccountName: workflow #HERE MAKE SURE THAT IT HAS THE NAME OF WORKFLOW SERVICE YOU've CREATE
   parallelism: 5
   entrypoint: pipeline
 
@@ -37,6 +37,13 @@ spec:
             parameters:
               - name: script
                 value: "src/data_preparation/prepare_data_enc_norm.py"
+        
+        - name: prepare-data-enc-no-norm
+          template: prepare-data
+          arguments:
+            parameters:
+              - name: script
+                value: "src/data_preparation/prepare_data_enc_nonorm.py"
 
         # Boosting models (enc_nonorm)
         - name: train-xgboost
@@ -189,5 +196,5 @@ spec:
           memory: "1Gi"
           cpu: "500m"
         limits:
-          memory: "2Gi"
+          memory: "6Gi"
           cpu: "1"
