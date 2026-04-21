@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from Config import RECLA_DELAIS_COURT, RECLA_DELAIS_LONG
+from Config import RECLA_DELAIS_COURT, RECLA_DELAIS_LONG, FIXED_CATEGORIES
 
 
 def aggregate_reclamations(df_reclamations, ref_date):
@@ -143,19 +143,19 @@ def aggregate_interaction(df_interaction):
     # --- Total interactions ---
     df_agg = df.groupby("client_code").size().to_frame("interaction_nb_total").reset_index()
 
-    # --- All motifs (one column per value) ---
-    motif_dummies = pd.get_dummies(
-        df["interaction_motif"]
-        .str.lower()
-        .str.replace(" ", "_", regex=False)
-        .str.replace("é", "e", regex=False)
-        .str.replace("è", "e", regex=False),
-        prefix="interaction_motif",
-        dtype=int
-    )
+    motif_dummies = pd.get_dummies(df["interaction_motif"], prefix="interaction_motif", dtype=int)
     df_motif = pd.concat([df[["client_code"]], motif_dummies], axis=1)
     df_motif_agg = df_motif.groupby("client_code")[motif_dummies.columns.tolist()].sum().reset_index()
+
+    # Enforce fixed vocab from config — same columns every time
+    if "interaction_motif" in FIXED_CATEGORIES:
+        df_motif_agg = df_motif_agg.reindex(
+            columns=["client_code"] + FIXED_CATEGORIES["interaction_motif"],
+            fill_value=0
+        )
+
     df_agg = df_agg.merge(df_motif_agg, on="client_code", how="left")
+
 
     # --- All services (one column per value) ---
     service_dummies = pd.get_dummies(
@@ -203,6 +203,15 @@ def aggregate_interaction(df_interaction):
     df_date = df.groupby("client_code")["interaction_date"].max().reset_index()
     df_date.rename(columns={"interaction_date":"derniere_interaction_date"}, inplace=True)
     df_agg = df_agg.merge(df_date, on="client_code", how="left")
+
+    #Creation of features on mail texte
+    df_mail_churn= df.groupby("client_code")["interaction_mail_churn_mention"].sum().reset_index()
+    df_mail_price= df.groupby("client_code")["interaction_mail_price_mention"].sum().reset_index()
+    df_mail_cancel_churn= df.groupby("client_code")["interaction_mail_cancel_churn_mention"].sum().reset_index()
+
+    df_agg= df_agg.merge(df_mail_churn, on="client_code", how="left")
+    df_agg= df_agg.merge(df_mail_price, on="client_code", how="left")
+    df_agg= df_agg.merge(df_mail_cancel_churn, on="client_code", how="left")
 
     # --- Fill NaN with zero -  except last interaction_date  ---
     non_mail_cols = [c for c in df_agg.columns if c not in ("client_code", "derniere_interaction_date")]
