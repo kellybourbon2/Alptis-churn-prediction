@@ -52,7 +52,7 @@ AWS_SESSION_TOKEN=...
 >  These credentials can be found in your SSPCloud account under **My Account → Storage Connection**. Note that `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
 
 
-## Data Preprocessing
+# Data Preprocessing
 
 Located in `src/data_processing/`, the preprocessing module handles data cleaning and preparation:
 
@@ -62,77 +62,128 @@ Located in `src/data_processing/`, the preprocessing module handles data cleanin
 - **`aggregation.py`**: Aggregates secondary files (reclamations, consumptions, interactions, overdue payments) at the client level
 - **`feature_engineering.py`**: Handles the creation of the new variables (courtier_anciennete_categories, client_age_categories, ...)
 - **`data_external.py`**: Handles the integration of external variables (revenue of commune in 2021 from Insee, ...)
-- **`prepare_data.py`**: Pipeline script that handles the data processsing, the train/test datasets preparation and the saving of the pre-processed datasets in S3 Storage (same as the one from Data Loading). The bucket for the storing in S3 can be changes with the variable `S3_DATA_PROCESSED_BUCKET` in `Config`.
+- **`text_processing.py`**: Handles the creation of features on the textual data (coming from nps reviews of year n or mails from interaction file)
 
-## Training
+The **`CODEBOOK.md`** presents a description of each variable created during features engineering, agregation, handling of textual data or external data integration.
 
-We've tested different models of training 
+# Data Preparation
+
+- **`prepare_data_enc_norm.py`**, **`prepare_data_noenc_norm.py`**, and **`prepare_data_enc_nonorm.py`**: pipeline scripts that handle:
+  - data preprocessing according to the selected parameters (e.g. encoding with normalization, encoding without normalization, etc.)
+  - preparation of the train/test datasets
+  - saving the preprocessed train/test datasets to S3 storage (same environment as used in the Data Loading step)
+
+**Note**: The destination S3 bucket can be modified through the variable `S3_DATA_PROCESSED_BUCKET` in `Config`.
+
+# Model training
+We've tested different models of training :
 ...
 
-## To create an Argo-workflow locally
+# How to create an Argo-Workflow experiment on Onyxia:
 
-1. Create the namespace kubernetes, for example called "argo"
+## First you need to specify the variables you want on this experiment
+1. Open Config.py file
+2. Change the first 4 variables as you want
+
+- If you just want to keep a list of selected variables from the dataset:
+TRY_FEW_COLUMNS = True
+COLUMNS_TO_KEEP = [] #put the only columns you want to keep here
+
+- If you just want to drop some variables from the dataset: 
+TRY_FEW_COLUMNS = False
+COLUMNS_TO_DROP = [] #put the columns you want to drop here
+
+In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create 
+
+4. Please copy-paste the variables you've selected/drop and the name of your experiment in TRACK_EXPERIMENT_MLFLOW.py to have a track of the dataset selected.
+
+## Then you can you create the argoworkflow experiment
+
+1. Create an argoworkflow service (on Onyxia Genes or SSPCloud, whatever)
+2. Create a VSCode service 
+⚠️ **Very important**: Select the "Admin" role for the VSCode service, otherwise you can't use argoworkflow with this VsCode
+3. Clone the projet in VSCode service, and do as usual in terminal: 
 ```ini
-kubectl create namespace argo
+cd Alptis-churn-prediction
+uv sync
+git switch <nom_branche_perso>
 ```
+4. Create a file, named `secret.yaml` in the root of the project with all your secrets variables, as followed: 
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: env-secrets 
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ...
+  AWS_SECRET_ACCESS_KEY: ... 
+  AWS_SESSION_TOKEN: ....
+  MLFLOW_TRACKING_PASSWORD: ....
+```
+>You can find AWS variables on Oxyxia Genes, in Mon Compte > Connection au Stockage
+>To find MLFLOW_TRACKING_PASSWORD: Mes Services > Projet: projet-bdc-data > Service partagé "Alptis-churn-mlflow-g2": ouvrir ce service et copier le mot de passe
 
-2. Install argoworkflow on the created namespace: 
+5. Pass this secrets to the kubernetes cluster: 
+```bash
+kubectl apply -f ./secret.yaml
+```
+6. Change the namespace and the name of the argoworkflow in file `argo_workflows/train_pipeline.yaml`
+See the row "metadata" of the file:
+- name: put the name you want for the experiment
+- namespace: put your own name space here, it's the name in the top when you open the Argoworkflow service
+>**Warning**: everytime you launch a new experiment, you have to choose a name of experiment you have not chosen yet, otherwise it will fail (or delete the former experiment to use same name)
+
+7. Run the workflow in argoworkflow
+```bash
+kubectl apply -f argo_workflows/train_pipeline.yaml
+```
+8. Open the server argoworkflow you created earlier to visualise the workflow
+
+9. You can visualise the results of the experiment (roc-auc, precision, ... of each model) in Onyxia Genes > Projet : "projet-bdc-alptis" > Service named "Alptis-churn-mlflow-g2"
+
+CONGRATULATIONS!!!
+
+## To do a a specific modle training and track results on MLFLOW
+
+To test one specific model on MLFLOW: 
+0. Change the variable MLFLOW_EXPERIMENT_NAME with the name of your experiment
+1. Open a MLFLOW service and copy-paste the password of the service somewhere
+2. Add the following in your `.env `file: 
 ```ini
-kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.7.12/install.yaml
+MLFLOW_TRACKING_USERNAME=projet-bdc-data
+MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
+MLFLOW_TRACKING_PASSWORD=... 
+MLFLOW_S3_ENDPOINT_URL=https://minio-simple.lab.groupe-genes.fr
 ```
+>Paste the password saved in step 1
+3. Run the model you want in terminal (*ex: uv run python train_xgboost.py*)
+4. Open the link of URI to see the results
+5. Can see the saved models in bucket bdc-alptis-g2/Artifacts_model_training
 
-3. Share the variables from `.env` file to the namespace kubectl created, as a secret: 
-```ini
-kubectl create secret generic env-secrets --from-env-file=.env -n argo
-```
-4. Create the argo-workflow (from the file `argo_workflows/train_pipeline`) on the namespace:
-```ini
-kubectl create -f argo_workflows/train_pipeline.yaml -n argo
-```
-5. Log to argo-workflow ui in another terminal bash (disable authentification then display on port 2467):
-First desactivate authentification:
-```ini
-kubectl patch deployment argo-server -n argo \
-  --type='json' \
-  -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["server","--auth-mode=server"]}]'
-```
-Then print on port 2746:
-```ini
-while true; do kubectl port-forward svc/argo-server -n argo 2746:2746 2>/dev/null; sleep 1; done
-```
-open:
-https://localhost to see Argoworkflow UI
-
-
-...or see how to setup kubernetes to S3 storage on Onyxia when available (Account > Onyxia)
-Install argoworkflow on namespace:
-
-kubectl apply -n test_namespace -f https://github.com/argoproj/argo-workflows/releases/latest/download/install.yaml
->  Make sure to change your-namespace with the name you gave to the kubectl space you've created.
-> Find credentials for access-key and secret-key in your SSPCloud account under **My Account → Storage**
-
-## To create an Argo-Workflow on Onyxia
---> Write when Onyxia's back (issue with Onyxia: impossible to put secrets in kubectl, has to go through Vault i think but not sure)
-
-First, Pass secret credentials to Vault
-... ? 
-
-Then, open an ArgoWorkflow server: 
-1. Create a template Argoworflow
-2. Paste the workflow in the template : argo_workflows\train_pipeline.yaml
->  make sure to change to namespace variable with your own namespace. *Ex: user-kbourbon* 
-3. Create workflow
 
 #### Demo (only for dev - to delete later)
 Look at the demo_loading notebook to know how to load a file from SPPCloud (after creating the .env file) 
 
 # TO DO 
 
-## Model training
->Faire enfin marcher argoworkflow 
->Créer un script pour catboost, random forest : faire un autre DAG, avec un data_preparation_2 sans option encoding 
->Eventuellement script pour rég linéaire: nécessite encore un data_preparation_3 avec encoding + tri sur multicolinéarité
->Ajouter sélection meilleur model + l'étape de clipping finale: 0 si annulation résiliation/ 0 si date_debut_effet_garanti_mois<11.5 à argoworkflow 
+
+Dans branche dévelopement: 
+
+- data proceesing: tester fonction create_nps_feature (partie detect_churn_...) de dominique sur interaction_texte_mail
+
+- écrire des script avec missing_values laissées dans data preparation: en faisant attention a option fill missing values --> tester sur modeles robuste a missing values et voir si diff en terme de score +  Check si yaml ok selon les specificités de chaque modele
+
+EXPORT... les var mlflow pour tester rapidos script training
+
+- Ajouter sélection meilleur model + l'étape de clipping finale: 0 si annulation résiliation/ 0 si date_debut_effet_garanti_mois<11.5 à la pipeline argoworkflow 
+
+- Run plein d'argoworfklow en changeant le dataprocessing (ajout de variables, suppressions d'autres,...) + avec et sans clipping + avec sans smote, ... et tjrs en précisant dans le nom de l'expérience (mlflow/argoworkflow) changement faits sur dataprocessing
+
+- modeles interpretables: 
+trouver le meilleur random forest/logistique regression (cf roc auc) du mlflow et charger ce modele enregistré dans artifact dans notebook pour générer des trucs pour partie analysis of result
+--> log reg: etudier signe des coeff + p-value etc
+--> random forest: créer arbre de décision le + proche etc
 
 
 ## Data processing

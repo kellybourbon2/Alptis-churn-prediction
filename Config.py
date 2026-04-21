@@ -4,6 +4,35 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
+# Load variables from secret file
+load_dotenv(override=True)
+
+#------TRAINING EXPERIMENT --------------
+#------------------------------------
+
+#name of experiment
+MLFLOW_EXPERIMENT_NAME= "kelly_training_complete_dataset_5_cv"
+
+#To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
+TRY_FEW_COLUMNS = False
+
+#then add these variables to columns to keep
+COLUMNS_TO_KEEP = [
+    "client_cotisation_taux_croissance_n_plus1_n",
+    "client_revenu_commune_2021",
+    "client_nps_churn_mention_n",
+    "client_toujours_engage",
+    "nb_jours_forfait_journalier",
+    "impaye_duree_max_action_jours",
+    "interaction_motif_autre"]
+
+#...or if you prefer just to select the variables to drop : 
+# put TRY_KEEP_FEW_VARIABLES to False
+#and modify below list:
+COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
+                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
+
+
 #-----------------------------------------------
 #---------------DATA PROCESSING--------------
 #--------------------------------------------
@@ -17,9 +46,9 @@ REFERENCE_DATES = {
     "evaluation":  pd.Timestamp("2025-05-31")
 }
 
-FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
+FILES_TO_DROP= [] #drop all the columns that begin with that
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
-                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
 COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
@@ -55,17 +84,14 @@ COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
     "courtier_anciennete_categories": ANCIENNETE_LABELS,
     'client_frequence_paiement': ['SEM','MS','TRIM','AN'], #valeurs de frequence paiement ordonnées
+    "client_nps_category_n":  ["detractor", "passive", "promoter"]
 }
 
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
 TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
-TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation"]
+TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation", "derniere_interaction_date"]
 
 #----------ENVIRONNEMENT SETTING--------------------------
-
-# Load environment variables
-load_dotenv(override=True)
-
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
@@ -76,12 +102,12 @@ DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 # S3 config
-S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "minio-simple.lab.groupe-genes.fr")
+S3_ENDPOINT = "minio-simple.lab.groupe-genes.fr"
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
-S3_BUCKET = os.getenv("AWS_BUCKET_NAME", "projet-bdc-data")
-S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "projet-bdc-alptis-g2") #where the data processed (validation/training) is saved after pre-processing 
+S3_BUCKET = "projet-bdc-data"
+S3_DATA_PROCESSED_BUCKET= "projet-bdc-alptis-g2" #where the data processed (validation/training) is saved after pre-processing 
 S3_VERIFY_SSL = False
 
 
@@ -121,3 +147,13 @@ DATASET_MAPPING = {
     "evaluation": EVALUATION_FILES,
     "validation": VALIDATION_FILES,  
 }
+
+
+#MLFLOW setting
+MLFLOW_TRACKING_INSECURE_TLS ="true" #disable TSL
+MLFLOW_DISABLE_UV_ENV_DETECTION ="true" #to avoid uv to be detected
+S3_BUCKET_ARTIFACT_TRAINING="s3://projet-bdc-alptis-g2/Artifacts_model_training"
+MLFLOW_S3_IGNORE_TLS="true"
+MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
+MLFLOW_TRACKING_URI= "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+MLFLOW_TRACKING_USERNAME= "projet-bdc-data"

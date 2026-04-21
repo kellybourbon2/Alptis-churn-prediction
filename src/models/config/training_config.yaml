@@ -1,0 +1,155 @@
+training:
+  random_state: 42 #fix the seed for reproductibility
+  cv_folds: 5 #between 3 to 5
+  n_optuna_trials: 50 #between 30-50
+  use_smote: false
+  primary_metric: "pr_auc"
+  output_dir: "artifacts"
+  shap_sample_size: 200        
+  early_stopping: true         #add to code as condition
+  n_iter_no_change: 20        #for histgbm and lightbgm
+  early_stopping_round: 50   #for Catboost, Xgboost
+  device : "cuda"
+  task_type : "CPU" #for Catboost bc not enough resource in kubernetes argoworkflow to use CUDA
+  scale_pos_weight : 8.175 # (nbr of y=0 samples) / (# nbr of y=1 samples) in training set
+  verbose: 0
+
+models:
+  logistic_regression:
+    data_suffix: "enc_norm"
+    class_weight: "balanced"
+    C_min: 0.0001
+    C_max: 100
+    logreg_max_iter: 500
+    logreg_tol: 0.001
+
+  random_forest:
+    data_suffix: "enc_nonorm"
+    class_weight: "balanced"
+
+  xgboost:
+    data_suffix: "enc_nonorm"
+    eval_metric: "aucpr"
+    tree_method: "hist"
+
+  catboost:
+    data_suffix: "enc_nonorm"
+    use_smote: false #never use smote on catboost
+
+    eval_metric: "AUC"
+    loss_function: "Logloss"
+    use_best_model: False
+    auto_class_weights: "Balanced"
+
+  lightgbm:
+    data_suffix: "enc_nonorm"
+    iter_no_change: true
+
+  histgb:
+    data_suffix: "enc_nonorm"
+
+optuna: 
+
+  lightgbm:
+    max_iter_min: 200
+    max_iter_max: 800
+    max_depth_min: 3
+    max_depth_max: 7
+    lr_min: 0.01
+    lr_max: 0.3
+    min_child_samples_min: 5
+    max_leaf_nodes_min: 15
+    max_leaf_nodes_max: 127
+    min_child_samples_max: 50
+    l2_reg_min: 0.0001
+    l2_reg_max: 10
+    hyperband_min_resource: 50
+    hyperband_max_resource: 400
+    hyperband_reduction_factor: 3
+    min_samples_leaf_min: 10
+    min_samples_leaf_max: 300
+
+  histgb:
+    max_iter_min: 200
+    max_iter_max: 800
+    max_depth_min: 3
+    max_depth_max: 10
+    lr_min: 0.005              # HistGB can go lower
+    lr_max: 0.2
+    max_leaf_nodes_min: 15
+    max_leaf_nodes_max: 255
+    min_samples_leaf_min: 5
+    min_samples_leaf_max: 50
+    l2_reg_min: 0.0001
+    l2_reg_max: 10
+    hyperband_min_resource: 50
+    hyperband_max_resource: 400
+    hyperband_reduction_factor: 3
+
+  xgboost:
+    n_estimators_min: 200
+    n_estimators_max: 800
+    max_depth_min: 3
+    max_depth_max: 8           # XGB is more sensitive to deep trees
+    lr_min: 0.01
+    lr_max: 0.3
+    subsample_min: 0.6         # XGB-specific
+    subsample_max: 1.0
+    colsample_bytree_min: 0.6
+    colsample_bytree_max: 1.0
+    lambda_min: 0.0001
+    lambda_max: 10
+    hyperband_min_resource: 50
+    hyperband_max_resource: 400
+    hyperband_reduction_factor: 3
+
+  
+  logistic_regression:
+    C_min: 0.0001
+    C_max: 100                 # log scale, wide range is fine for LR
+    tol_min: 0.00001
+    tol_max: 0.01              # convergence tolerance
+    max_iter: 500              # fixed, not tuned — just needs to be high enough
+    # solver fixed to 'saga' — handles l1/l2 and large datasets well
+    penalty:                   # tried as categorical
+      - "l1"
+      - "l2"
+      - "elasticnet"
+    l1_ratio_min: 0.0          # only used if elasticnet
+    l1_ratio_max: 1.0
+
+  random_forest:
+    n_estimators_min: 100
+    n_estimators_max: 600      # more trees = better but diminishing returns
+    max_depth_min: 3
+    max_depth_max: 20          # RF can go deeper than boosting safely
+    min_samples_leaf_min: 1
+    min_samples_leaf_max: 20
+    min_samples_split_min: 2
+    min_samples_split_max: 20
+    max_features:              # most impactful RF param
+      - "sqrt"                 # default, usually best for classification
+      - "log2"
+      - 0.3
+      - 0.5
+    max_samples_min: 0.5       # bootstrap sample size (bagging fraction)
+    max_samples_max: 1.0
+  
+  catboost:
+    iterations_min: 200
+    iterations_max: 800
+    depth_min: 4              # CatBoost uses 'depth' not 'max_depth', sweet spot 4-8
+    depth_max: 8
+    lr_min: 0.01
+    lr_max: 0.3
+    l2_reg_min: 1             # CatBoost's l2 scale is different — starts at 1 not 0.0001
+    l2_reg_max: 10
+    bagging_temperature_min: 0.0   # Bayesian bootstrap, 0=no randomness, 1=standard
+    bagging_temperature_max: 1.0
+    random_strength_min: 0.0       # randomness for scoring splits, helps avoid overfit
+    random_strength_max: 3.0
+    border_count_min: 32           # number of splits for numerical features
+    border_count_max: 255
+    hyperband_min_resource: 50
+    hyperband_max_resource: 400
+    hyperband_reduction_factor: 3
