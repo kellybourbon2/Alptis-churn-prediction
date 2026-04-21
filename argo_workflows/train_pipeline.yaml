@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testargokelly2 #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    name: testargowork #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
     namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMESPACE 
 
 spec:
@@ -65,7 +65,7 @@ spec:
 
         #TEMPORARY: catboost on encoded data
         - name: train-catboost 
-          dependencies: [prepare-data-enc-no-norm]
+          dependencies: [prepare-data-no-enc-no-norm]
           template: train
           arguments:
             parameters:
