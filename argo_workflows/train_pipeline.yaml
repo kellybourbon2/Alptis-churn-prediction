@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-    name: testpls #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
+    name: testargo2 #CHANGE HERE WITH THE NAME OF EXPERIMENT YOU WANT
     namespace: user-kbourbon #CHANGE HERE WITH YOUR NAMESPACE 
 
 spec:
@@ -17,28 +17,28 @@ spec:
       tasks:
 
         # Data preparation (parallel)
-        - name: prepare-data-no-enc-no-norm-duplicates-missing
+        - name: no-enc-no-norm-duplicates-missing
           template: prepare-data
           arguments:
             parameters:
               - name: script
                 value: "src/data_preparation/prepare_data_noenc_nonorm_duplicatemissing.py"
 
-        - name: prepare-data-enc-no-norm-duplicates-missing
+        - name: enc-no-norm-duplicates-missing
           template: prepare-data
           arguments:
             parameters:
               - name: script
                 value: "src/data_preparation/prepare_data_enc_nonorm_duplicatemissing.py"
 
-        - name: prepare-data-enc-norm
+        - name: enc-norm
           template: prepare-data
           arguments:
             parameters:
               - name: script
                 value: "src/data_preparation/prepare_data_enc_norm.py"
         
-        - name: prepare-data-enc-no-norm
+        - name: enc-no-norm
           template: prepare-data
           arguments:
             parameters:
@@ -47,7 +47,7 @@ spec:
 
         # Boosting models (enc_nonorm)
         - name: train-xgboost
-          dependencies: [prepare-data-enc-no-norm-duplicates-missing]
+          dependencies: [enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:
@@ -55,7 +55,7 @@ spec:
                 value: "src/models/train_xgboost.py"
 
         - name: train-lightgbm
-          dependencies: [prepare-data-enc-no-norm-duplicates-missing]
+          dependencies: [enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:
@@ -63,7 +63,7 @@ spec:
                 value: "src/models/train_lightgbm.py"
 
         - name: train-histgb
-          dependencies: [prepare-data-enc-no-norm]
+          dependencies: [enc-no-norm]
           template: train
           arguments:
             parameters:
@@ -72,7 +72,7 @@ spec:
 
         #catboost
         - name: train-catboost 
-          dependencies: [prepare-data-no-enc-no-norm-duplicates-missing]
+          dependencies: [enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:
@@ -80,7 +80,7 @@ spec:
                 value: "src/models/train_catboost.py"
 
         - name: train-random-forest
-          dependencies: [prepare-data-enc-no-norm]
+          dependencies: [enc-no-norm]
           template: train
           arguments:
             parameters:
@@ -90,7 +90,7 @@ spec:
 
         # Logistic Regression (enc_norm)
         - name: train-logistic-regression
-          dependencies: [prepare-data-enc-norm]
+          dependencies: [enc-norm]
           template: train
           arguments:
             parameters:

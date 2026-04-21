@@ -106,7 +106,6 @@ In MLFLOW_EXPERIMENT_NAME: put the name of the experiment you want to create
 ```ini
 cd Alptis-churn-prediction
 uv sync
-git switch <nom_branche_perso>
 ```
 4. Create a file, named `secret.yaml` in the root of the project with all your secrets variables, as followed: 
 ```
