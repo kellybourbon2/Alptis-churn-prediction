@@ -11,7 +11,7 @@ load_dotenv(override=True)
 #------------------------------------
 
 #name of experiment
-MLFLOW_EXPERIMENT_NAME= "FINAL_EXPERIMENT_FULL_DATASET"
+MLFLOW_EXPERIMENT_NAME= "EXPERIMENT_NAME"
 
 #To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
 TRY_FEW_COLUMNS = False
