@@ -24,6 +24,6 @@
 |client_nps_churn_mention_n | bool | Indicates whether or not the client has mentioned churn in nps of year n|
 |client_nps_price_mention_n | bool | Indicates whether or not the client has mentioned price in nps of year n|
 |client_nps_category_n | str | Indicates the client is a detractor, passive or promotor based on nps score of year n|
-|interaction_mail_price_mention | int | Indicates how much the client has mentioned price in the mails of interaction_texte_mail|
-|interaction_mail_churn_mention | int |  Indicates how much the client has mentioned churn in the mails of interaction_texte_mail|
-|interaction_mail_cancel_churn_mention | int |  Indicates how much the client has asked to cancel its resiliation in the mails of interaction_texte_mail|
+|interaction_mail_price_mention | int | Indicates how much the client has mentioned price in the mails of interaction_texte_mail in one year|
+|interaction_mail_churn_mention | int |  Indicates how much the client has mentioned churn in the mails of interaction_texte_mail in our year|
+|interaction_mail_cancel_churn_mention | int |  Indicates how much the client has asked to cancel its resiliation in the mails of interaction_texte_mail in our year|
