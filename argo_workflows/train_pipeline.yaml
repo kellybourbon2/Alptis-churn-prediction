@@ -17,19 +17,19 @@ spec:
       tasks:
 
         # Data preparation (parallel)
-        - name: prepare-data-no-enc-no-norm
+        - name: prepare-data-no-enc-no-norm-duplicates-missing
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_preparation/prepare_data_noenc_nonorm.py"
+                value: "src/data_preparation/prepare_data_noenc_nonorm_duplicatemissing.py"
 
-        - name: prepare-data-enc-no-norm
+        - name: prepare-data-enc-no-norm-duplicates-missing
           template: prepare-data
           arguments:
             parameters:
               - name: script
-                value: "src/data_preparation/prepare_data_enc_nonorm.py"
+                value: "src/data_preparation/prepare_data_enc_nonorm_duplicatemissing.py"
 
         - name: prepare-data-enc-norm
           template: prepare-data
@@ -40,7 +40,7 @@ spec:
 
         # Boosting models (enc_nonorm)
         - name: train-xgboost
-          dependencies: [prepare-data-enc-no-norm]
+          dependencies: [prepare-data-enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:
@@ -48,7 +48,7 @@ spec:
                 value: "src/models/train_xgboost.py"
 
         - name: train-lightgbm
-          dependencies: [prepare-data-enc-no-norm]
+          dependencies: [prepare-data-enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:
@@ -63,9 +63,9 @@ spec:
               - name: script
                 value: "src/models/train_histgb.py"
 
-        #TEMPORARY: catboost on encoded data
+        #catboost
         - name: train-catboost 
-          dependencies: [prepare-data-no-enc-no-norm]
+          dependencies: [prepare-data-no-enc-no-norm-duplicates-missing]
           template: train
           arguments:
             parameters:

@@ -1,5 +1,5 @@
 """Pipeline file that handles the data preparation, without encoding and without normalisation
-1. data processing with no encoding and no normalisation
+1. data processing with no encoding and no normalisation and duplication of columns with missing values
 2. definition of dataframes for X_train, y_train, X_test, y_test
 3. Save each dataframe on S3 storage, in parquet format (with _noenc_nonorm at the end)
  """
@@ -13,18 +13,19 @@ from src.data_processing.data_processing import DataProcessor
 from src.data_processing.data_load import save_data_processed_parquet_to_s3
 
 
-#loading of training set
-train_processor = DataProcessor(mode="training")
+#loading of training set, with duplication  of columns with missing values
+train_processor = DataProcessor(mode="training", add_missing_indicators=True)
 
 #processing and fit training set
 df_train = train_processor.run(optional_encoding=False, optional_normalisation=False)
 
-#loading of validation set
-test_processor = DataProcessor(mode="validation")
+#loading of validation set, with duplication of columns with missing values
+test_processor = DataProcessor(mode="validation", add_missing_indicators=True)
 
 #pass arguments to avoid data-leakage from training to validation
 test_processor.scaler                = train_processor.scaler
 test_processor.normalized_columns    = train_processor.normalized_columns
+test_processor.missing_indicator_cols    = train_processor.missing_indicator_cols
 
 #processing of validation set
 df_test = test_processor.run_transform(optional_encoding=False, optional_normalisation=False)
@@ -36,7 +37,7 @@ X_test  = df_test.drop(columns=[Config.TARGET_COLUMN, Config.KEY_COLUMN])
 y_test  = pd.DataFrame(df_test[Config.TARGET_COLUMN])
 
 # Save everything on S3 in parquet format
-save_data_processed_parquet_to_s3(X_train, "X_train_noenc_nonorm")
-save_data_processed_parquet_to_s3(y_train, "y_train_noenc_nonorm")
-save_data_processed_parquet_to_s3(X_test, "X_test_noenc_nonorm")
-save_data_processed_parquet_to_s3(y_test, "y_test_noenc_nonorm")
+save_data_processed_parquet_to_s3(X_train, "X_train_noenc_nonorm_duplicatemissing")
+save_data_processed_parquet_to_s3(y_train, "y_train_noenc_nonorm_duplicatemissing")
+save_data_processed_parquet_to_s3(X_test, "X_test_noenc_nonorm_duplicatemissing")
+save_data_processed_parquet_to_s3(y_test, "y_test_noenc_nonorm_duplicatemissing")
