@@ -96,10 +96,7 @@ COLUMNS_ORDINAL = {
 TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
 TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation", "derniere_interaction_date"]
 
-FORCE_CATEGORICAL = [
-    "client_departement",
-    "client_code_apporteur",
-    "client_code_partenaire",] #columns to encode despite being numericals since its categories in reality
+FORCE_CATEGORICAL = [] #columns to encode despite being numericals since its categories in reality
 
 #----------ENVIRONNEMENT SETTING--------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

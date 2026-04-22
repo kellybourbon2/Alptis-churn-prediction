@@ -108,11 +108,18 @@ The destination S3 bucket can be modified in `Config.py`:
 S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 ```
 
-# Model Training
+# Model
 
+## Final Model
+
+The final model is a stacked model,  created with the script `src/models/model_stack.py`.
+This model is stacked from three models: LogisticRegression, XGBoost and CatBoost. 
+Those three models were trained independantly, as the next parts explain.
+
+## Models training
 The model training pipeline supports multiple algorithms optimized for churn prediction. All training scripts are located in `src/models_training/` and are configured through `src/models_training/config/training_config.yaml`.
 
-## Supported Models
+### Supported Models
 
 - **Logistic Regression**: Interpretable baseline model with balanced class weights
 - **Random Forest**: Ensemble method with feature importance analysis
@@ -121,7 +128,7 @@ The model training pipeline supports multiple algorithms optimized for churn pre
 - **HistGradientBoosting**: Native histogram-based gradient boosting
 - **CatBoost**: Native support for categorical features, no encoding required
 
-## Training Configuration
+### Training Configuration
 
 The `training_config.yaml` file defines:
 
@@ -136,11 +143,11 @@ The `training_config.yaml` file defines:
 
 ### Data Preparation specificiations for each model
 Each model is configured with a `data_suffix` specifying its input format:
-- `"enc_norm"`: Encoded and normalized features (Logistic Regression for example)
-- `"enc_nonorm"`: Encoded but not normalized features  
+- `"enc_norm"`: Encoded and normalized features (for Logistic Regression)
+- `"enc_nonorm"`: Encoded but not normalized features  (for XGBoost, LightGBM and HistGB )
 - `"noenc_nonorm"`: Raw features without encoding (CatBoost for example)
 
-## Running a Single Model Locally
+### Running a Single Model Locally
 
 To train and evaluate a specific model:
 
@@ -152,26 +159,7 @@ source .venv/bin/activate
 uv run python src/models_training/train_xgboost.py   
 ```
 
-Each training script will:
-1. Load the preprocessed data from S3 
-2. Run Optuna hyperparameter optimization with cross-validation
-3. Train the final model with best parameters
-4. Compute SHAP feature importance
-5. Evaluate on test set
-6. Log all results to MLflow
-
-## Output and Results
-
-Training results are logged to MLflow including:
-- Best hyperparameters
-- Cross-validation and test metrics (ROC-AUC, PR-AUC, F1, Precision, Recall)
-- Training time
-- Top 20 SHAP feature importance values
-- Trained model artifacts
-- Classification report and confusion matrix
-
 Models training are automatically dumped into `bdc-alptis-g2/Artifacts_model_training/`
-
 
 # Experiment Reproducibility
 
@@ -218,9 +206,9 @@ The following files and directories are essential for experiment reproducibility
 │   └── Dockerfile               # Image with all dependencies + S3 access
 ├── src/data_preparation/        # Data transformation scripts for different model types
 │   ├── prepare_data_enc_norm.py
-│   ├── prepare_data_enc_nonorm.py
-│   ├── prepare_data_noenc_nonorm_duplicatemissing.py
-│   └── prepare_data_enc_nonorm_duplicatemissing.py
+│   │ 
+│   ├── prepare_data_noenc_nonorm.py
+│   └── prepare_data_enc_nonorm.py
 ├── src/models_training/config/           # Model configuration
 │   └── training_config.yaml     # Hyperparameters for all 6 models
 ├── src/models_training/                  # Model training scripts
@@ -232,11 +220,10 @@ The following files and directories are essential for experiment reproducibility
 │   └── train_histgb.py
 └── argo_workflows/              # Kubernetes workflow definitions
     └── train_pipeline.yaml      # Complete pipeline orchestration
-```
+    ```
 
-### Data & Result Flow
+    ### Data & Result Flow
 
-**With S3 Loading** (default for Argo Workflow):
 ```
 S3 raw data (bdc-alptis-g2/raw_data/) 
   → src/data_preparation/ 
@@ -245,14 +232,6 @@ S3 raw data (bdc-alptis-g2/raw_data/)
   → S3 artifacts + MLflow (logs results)
 ```
 
-**With Local Loading** (for development):
-```
-Local data/train, data/validation, data/test
-  → src/data_preparation/ 
-  → S3 processed data 
-  → src/models_training/ 
-  → Optional MLflow logging
-```
 
 ## Docker - Containerized Environment
 
@@ -276,7 +255,7 @@ The `argo_workflows/train_pipeline.yaml` defines a complete, automated training 
    - Passes secrets securely via Kubernetes secrets
    - All runs are version-controlled and logged
 
-**Benefit**: The entire experiment pipeline is defined as code. Alptis team can re-run the exact same experiments on the processed dataset without manual intervention, ensuring consistency and reproducibility across runs.
+
 
 # How to Create an Argo Workflow Experiment on SSPCloud
 
@@ -315,17 +294,8 @@ uv sync
 
 Since Argo runs in Kubernetes, create `secret.yaml` using the credentials from `.env`:
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: env-secrets
-type: Opaque
-stringData:
-  AWS_ACCESS_KEY_ID: <from .env file>
-  AWS_SECRET_ACCESS_KEY: <from .env file>
-  AWS_SESSION_TOKEN: <from .env file>
-  MLFLOW_TRACKING_PASSWORD: <from Onyxia MLflow service>
+```bash
+cp secret_template.yaml secret.yaml
 ```
 
 Then apply it to the cluster:

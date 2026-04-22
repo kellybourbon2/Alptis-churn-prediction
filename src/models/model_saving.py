@@ -69,3 +69,30 @@ def load_model_from_s3(
     except Exception as e:
         logging.error(f"❌ Failed to load model from S3: {e}")
         raise e
+
+
+def save_stack_model_to_s3(
+    model,
+    model_name: str,
+    bucket: str = S3_BUCKET_FINAL_MODELS,
+) -> None:
+
+    fs = s3fs.S3FileSystem(
+        endpoint_url=f"https://{Config.S3_ENDPOINT}",
+        key=Config.S3_ACCESS_KEY,
+        secret=Config.S3_SECRET_KEY,
+        token=Config.S3_SESSION_TOKEN,
+        client_kwargs={"verify": Config.S3_VERIFY_SSL},
+    )
+
+    s3_path = f"{bucket}/{model_name}.pkl"
+
+    try:
+        with fs.open(s3_path, "wb") as f:
+            joblib.dump(model, f)
+
+        logging.info(f"✅ Model saved to S3: {s3_path}")
+
+    except Exception as e:
+        logging.error(f"❌ Failed to save model to S3: {e}")
+        raise

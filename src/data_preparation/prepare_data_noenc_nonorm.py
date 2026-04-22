@@ -14,18 +14,17 @@ from src.data_processing.data_load import save_data_processed_parquet_to_s3
 
 
 #loading of training set, with duplication  of columns with missing values
-train_processor = DataProcessor(mode="training", add_missing_indicators=True)
+train_processor = DataProcessor(mode="training")
 
 #processing and fit training set
 df_train = train_processor.run(optional_encoding=False, optional_normalisation=False)
 
 #loading of validation set, with duplication of columns with missing values
-test_processor = DataProcessor(mode="validation", add_missing_indicators=True)
+test_processor = DataProcessor(mode="validation")
 
 #pass arguments to avoid data-leakage from training to validation
 test_processor.scaler                = train_processor.scaler
 test_processor.normalized_columns    = train_processor.normalized_columns
-test_processor.missing_indicator_cols    = train_processor.missing_indicator_cols
 
 #processing of validation set
 df_test = test_processor.run_transform(optional_encoding=False, optional_normalisation=False)
@@ -37,7 +36,7 @@ X_test  = df_test.drop(columns=[Config.TARGET_COLUMN, Config.KEY_COLUMN])
 y_test  = pd.DataFrame(df_test[Config.TARGET_COLUMN])
 
 # Save everything on S3 in parquet format
-save_data_processed_parquet_to_s3(X_train, "X_train_noenc_nonorm_duplicatemissing")
-save_data_processed_parquet_to_s3(y_train, "y_train_noenc_nonorm_duplicatemissing")
-save_data_processed_parquet_to_s3(X_test, "X_test_noenc_nonorm_duplicatemissing")
-save_data_processed_parquet_to_s3(y_test, "y_test_noenc_nonorm_duplicatemissing")
+save_data_processed_parquet_to_s3(X_train, "X_train_noenc_nonorm")
+save_data_processed_parquet_to_s3(y_train, "y_train_noenc_nonorm")
+save_data_processed_parquet_to_s3(X_test, "X_test_noenc_nonorm")
+save_data_processed_parquet_to_s3(y_test, "y_test_noenc_nonorm")
