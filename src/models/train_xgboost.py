@@ -4,20 +4,29 @@ MLOps : MLflow tracking · Optuna HPO · SHAP explainability
 Imbalance: scale_pos_weight / SMOTE
 """
 
+
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
+from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING
+
+import os
+os.chdir("src/models")  # to avoid pyproject to be detected by mlflow
+os.environ["MLFLOW_TRACKING_URI"]      = "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+os.environ["MLFLOW_S3_ENDPOINT_URL"]   = "https://minio-simple.lab.groupe-genes.fr"
+os.environ["MLFLOW_TRACKING_INSECURE_TLS"] = "true"
+os.environ["MLFLOW_S3_IGNORE_TLS"]     = "true"
+
 import time
 import warnings
+import yaml
 import numpy as np
-import pandas as pd
 import mlflow
-import mlflow.xgboost
+import mlflow.sklearn
 import optuna
 import shap
 
-from dataclasses import dataclass
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.metrics import (
     roc_auc_score, average_precision_score, f1_score,
@@ -30,37 +39,23 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-from src.data_processing.data_processing import DataProcessor
 from src.data_processing.data_load import load_data_processed_from_S3
-from Config import KEY_COLUMN, TARGET_COLUMN
-
-
-@dataclass
-class Config:
-    random_state: int       = 42
-    cv_folds: int           = 5
-    n_optuna_trials: int    = 20
-    use_smote: bool         = False
-    experiment_name: str    = "boosting"
-    output_dir: Path        = Path("artifacts")
-    primary_metric: str     = "pr_auc"
-    device: str             = "cuda"
-
-CFG = Config()
-CFG.output_dir.mkdir(exist_ok=True)
+from model_saving import save_model_to_s3
 
 MODEL_NAME = "xgboost"
 
 
+# ── Config ────────────────────────────────────────────────────────────────────
+
+def load_config(path="config/training_config.yaml") -> dict:
+    with open(path) as f:
+        raw = yaml.safe_load(f)
+    cfg = raw["training"].copy()
+    cfg.update(raw["models"][MODEL_NAME])
+    cfg["optuna"] = raw["optuna"]
+    return cfg
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-def compute_scale_pos_weight(y):
-    y = y.ravel()  
-    neg, pos = np.bincount(y)
-    spw = neg / pos
-    print(f"scale_pos_weight = {spw:.2f}  (neg={neg}, pos={pos})")
-    return spw
-
 
 def evaluate(model, X, y, prefix=""):
     proba = model.predict_proba(X)[:, 1]
@@ -74,58 +69,84 @@ def evaluate(model, X, y, prefix=""):
     }
 
 
-def cv_score(estimator, X, y, cfg: Config, scoring="average_precision"):
-    cv = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True, random_state=cfg.random_state)
+def cv_score(estimator, X, y, cfg: dict, scoring="average_precision"):
+    cv = StratifiedKFold(n_splits=cfg["cv_folds"], shuffle=True, random_state=cfg["random_state"])
     scores = cross_val_score(estimator, X, y, cv=cv, scoring=scoring, n_jobs=-1)
     return scores.mean()
 
-
-def get_model(params: dict, spw: float):
+def get_model(params: dict, cfg: dict):
     return XGBClassifier(
         **params,
-        use_label_encoder=False,
-        eval_metric="aucpr",
-        tree_method="hist",
-        device=CFG.device,
-        random_state=CFG.random_state,
-        verbosity=0,
+        scale_pos_weight=cfg["scale_pos_weight"],
+        eval_metric = cfg["eval_metric"],
+        tree_method=cfg["tree_method"],
+        device=cfg["device"],
+        random_state=cfg["random_state"],
         n_jobs=-1,
     )
 
-
-def build_pipeline(estimator, cfg: Config):
-    steps = [("smote", SMOTE(random_state=cfg.random_state)), ("model", estimator)]
+def build_pipeline(estimator, cfg: dict):
+    if cfg["use_smote"]:
+        steps = [("smote", SMOTE(random_state=cfg["random_state"])), ("model", estimator)]
+    else:
+        steps = [("model", estimator)]
     return ImbPipeline(steps)
 
 
 # ── Optuna ────────────────────────────────────────────────────────────────────
+def get_search_space(trial, o):
+    return {
+        # boosting rounds
+        "n_estimators": trial.suggest_int("n_estimators", 200, 3000),
 
-SEARCH_SPACE = lambda trial: {
-    "n_estimators":     trial.suggest_int("n_estimators", 200, 800),
-    "max_depth":        trial.suggest_int("max_depth", 3, 8),
-    "learning_rate":    trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-    "subsample":        trial.suggest_float("subsample", 0.6, 1.0),
-    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
-    "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
-    "gamma":            trial.suggest_float("gamma", 0, 5),
-    "reg_alpha":        trial.suggest_float("reg_alpha", 1e-4, 10, log=True),
-    "reg_lambda":       trial.suggest_float("reg_lambda", 1e-4, 10, log=True),
-}
+        # tree complexity
+        "max_depth": trial.suggest_int("max_depth", 3, 10),
+        "min_child_weight": trial.suggest_float("min_child_weight", 1, 20, log=True),
+
+        # learning rate
+        "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.15, log=True),
+
+        # row / feature sampling
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
+        "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.5, 1.0),
+
+        # regularization
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 100, log=True),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 50, log=True),
+
+        # split control
+        "gamma": trial.suggest_float("gamma", 1e-8, 10, log=True),
+
+        # leaf step size / robustness
+        "max_delta_step": trial.suggest_float("max_delta_step", 0, 10),
+
+        # grow method
+        "grow_policy": trial.suggest_categorical(
+            "grow_policy", ["depthwise", "lossguide"]
+        ),
+    }
 
 
-def run_optuna(X_train, y_train, spw: float, cfg: Config):
+def run_optuna(X_train, y_train, cfg: dict):
+    o = cfg["optuna"]["xgboost"]
+
     def objective(trial):
-        params = SEARCH_SPACE(trial)
-        est    = get_model(params, spw)
+        params = get_search_space(trial, o)
+        est    = get_model(params, cfg)
         pipe   = build_pipeline(est, cfg)
         return cv_score(pipe, X_train, y_train, cfg)
 
     study = optuna.create_study(
         direction="maximize",
-        sampler=optuna.samplers.TPESampler(seed=cfg.random_state),
-        pruner=optuna.pruners.HyperbandPruner(min_resource=50, max_resource=400, reduction_factor=3),
+        sampler=optuna.samplers.TPESampler(seed=cfg["random_state"]),
+        pruner=optuna.pruners.HyperbandPruner(
+            min_resource=o["hyperband_min_resource"],
+            max_resource=o["hyperband_max_resource"],
+            reduction_factor=o["hyperband_reduction_factor"],
+        ),
     )
-    study.optimize(objective, n_trials=cfg.n_optuna_trials, show_progress_bar=False)
+    study.optimize(objective, n_trials=cfg["n_optuna_trials"], show_progress_bar=False)
     return study.best_params, study.best_value
 
 
@@ -143,32 +164,35 @@ def compute_shap(estimator, X_sample):
 
 # ── MLflow ────────────────────────────────────────────────────────────────────
 
-def mlflow_run(best_params, best_cv, estimator, X_train, X_test, y_train, y_test, spw, elapsed):
+def mlflow_run(cfg, best_params, best_cv, estimator, X_train, X_test, y_train, y_test, elapsed):
+    output_dir = Path(cfg["output_dir"])
+    output_dir.mkdir(exist_ok=True)
+
     with mlflow.start_run(run_name=MODEL_NAME):
-        mlflow.set_tags({"model": MODEL_NAME, "smote": CFG.use_smote})
+        mlflow.set_tags({"model": MODEL_NAME, "smote": cfg["use_smote"]})
 
         mlflow.log_params(best_params)
-        mlflow.log_param("scale_pos_weight", round(spw, 3))
-        mlflow.log_param("cv_folds", CFG.cv_folds)
-        mlflow.log_param("n_optuna_trials", CFG.n_optuna_trials)
+        mlflow.log_param("cv_folds",        cfg["cv_folds"])
+        mlflow.log_param("n_optuna_trials", cfg["n_optuna_trials"])
+        mlflow.log_param("use_smote",       cfg["use_smote"])
+        mlflow.log_param("data_suffix",     cfg["data_suffix"])
 
-        mlflow.log_metric(f"cv_{CFG.primary_metric}", best_cv)
+        mlflow.log_metric(f"cv_{cfg['primary_metric']}", best_cv)
 
         train_m = evaluate(estimator, X_train, y_train, prefix="train_")
         test_m  = evaluate(estimator, X_test,  y_test,  prefix="test_")
         mlflow.log_metrics({**train_m, **test_m})
         mlflow.log_metric("train_time_s", elapsed)
 
-        X_sample = X_test[:200].toarray() if hasattr(X_test, "toarray") else X_test[:200]
+        X_sample = X_test.iloc[:cfg["shap_sample_size"]] if hasattr(X_test, "iloc") else X_test[:cfg["shap_sample_size"]]
         shap_info = compute_shap(estimator, X_sample)
         if shap_info:
             mlflow.log_params(shap_info)
 
-        mlflow.xgboost.log_model(estimator.named_steps["model"], "model")
-
+        mlflow.sklearn.log_model( estimator.named_steps["model"],  MODEL_NAME, pip_requirements=[]   )
         pred  = estimator.predict(X_test)
         proba = estimator.predict_proba(X_test)[:, 1]
-        report_path = CFG.output_dir / f"{MODEL_NAME}_report.txt"
+        report_path = output_dir / f"{MODEL_NAME}_report.txt"
         with open(report_path, "w") as f:
             f.write(f"=== {MODEL_NAME.upper()} ===\n\n")
             f.write(f"Best CV PR-AUC : {best_cv:.4f}\n\n")
@@ -186,32 +210,42 @@ def mlflow_run(best_params, best_cv, estimator, X_train, X_test, y_train, y_test
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    cfg = load_config()
+    Path(cfg["output_dir"]).mkdir(exist_ok=True)
+
     print("\n" + "="*60)
-    print("XGBoost training ...")
+    print(f"{MODEL_NAME} training ...")
     print("="*60 + "\n")
 
-    # Load training and validation sets from S3 storage
-    X_train = load_data_processed_from_S3("X_train")
-    y_train = load_data_processed_from_S3("y_train").values
-    X_test  = load_data_processed_from_S3("X_test")
-    y_test  = load_data_processed_from_S3("y_test").values
+    suffix  = cfg["data_suffix"]
+    X_train = load_data_processed_from_S3(f"X_train_{suffix}")
+    y_train = load_data_processed_from_S3(f"y_train_{suffix}").values
+    X_test  = load_data_processed_from_S3(f"X_test_{suffix}")
+    y_test  = load_data_processed_from_S3(f"y_test_{suffix}").values
 
-    spw = compute_scale_pos_weight(y_train)
+    #Load or create experiment with name and uri defined in .env
+    mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+    experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+    if experiment is None:
+        mlflow.create_experiment(
+            MLFLOW_EXPERIMENT_NAME,
+            artifact_location=S3_BUCKET_ARTIFACT_TRAINING
+        )
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)  
 
-    mlflow.set_experiment(CFG.experiment_name)
-
-    print(f"  Optuna HPO ({CFG.n_optuna_trials} trials) …")
+    print(f"  Optuna HPO ({cfg['n_optuna_trials']} trials) …")
     t0 = time.perf_counter()
-    best_params, best_cv = run_optuna(X_train, y_train, spw, CFG)
-    print(f"  Best CV {CFG.primary_metric}: {best_cv:.4f}")
+    best_params, best_cv = run_optuna(X_train, y_train, cfg)
+    print(f"  Best CV {cfg['primary_metric']}: {best_cv:.4f}")
 
-    est  = get_model(best_params, spw)
-    pipe = build_pipeline(est, CFG)
+    est = get_model(best_params, cfg)
+    pipe = build_pipeline(est, cfg)
     pipe.fit(X_train, y_train)
+
     elapsed = time.perf_counter() - t0
     print(f"  Training done in {elapsed:.1f}s")
-
-    row = mlflow_run(best_params, best_cv, pipe, X_train, X_test, y_train, y_test, spw, elapsed)
+    save_model_to_s3(pipe, MODEL_NAME)
+    row = mlflow_run(cfg, best_params, best_cv, pipe, X_train, X_test, y_train, y_test, elapsed)
     print(f"  Test ROC-AUC={row['test_roc_auc']:.4f} | PR-AUC={row['test_pr_auc']:.4f}")
 
 

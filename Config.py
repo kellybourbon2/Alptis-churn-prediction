@@ -4,6 +4,37 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
+# Load variables from secret file
+load_dotenv(override=True)
+
+#------TRAINING EXPERIMENT --------------
+#------------------------------------
+
+#name of experiment
+MLFLOW_EXPERIMENT_NAME= " ALPTIS_FINAL_WITHOUT_CODE_COURTIER"
+
+#To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
+TRY_FEW_COLUMNS = False
+
+#then add these variables to columns to keep
+COLUMNS_TO_KEEP = [
+    "client_cotisation_taux_croissance_n_plus1_n",
+    "client_revenu_commune_2021",
+    "client_nps_churn_mention_n",
+    "client_toujours_engage",
+    "nb_jours_forfait_journalier",
+    "impaye_duree_max_action_jours",
+    "client_code_apporteur", 
+    "client_code_partenaire"
+    "interaction_motif_autre"]
+
+#...or if you prefer just to select the variables to drop : 
+# put TRY_KEEP_FEW_VARIABLES to False
+#and modify below list:
+COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
+                   "client_structure_familiale", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
+
+
 #-----------------------------------------------
 #---------------DATA PROCESSING--------------
 #--------------------------------------------
@@ -17,9 +48,10 @@ REFERENCE_DATES = {
     "evaluation":  pd.Timestamp("2025-05-31")
 }
 
-FILES_TO_DROP= ["impaye"] #drop all the columns that begin with that
+FILES_TO_DROP= [] #drop all the columns that begin with that
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
-                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', 'client_nps_date_reponse_n_jours'] #nom_banque car comme valeurs manquantes, compliqué à target-encodé puis normalisé 
+                    "courtier_code_apporteur", "courtier_code_partenaire", #to avoid overfitting
+                   "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
 COLUMNS_TO_PROCESSED_WITH_NLP= ["client_nps_verbatim_n", "client_nps_verbatim_n_moins1"] # retrait 'interaction_historique_mail'
@@ -49,24 +81,27 @@ HIGH_CARDINALITY=10
 EXCEPT_HIGH_CARDINALITY = ["courtier_segmentation_interne"] #variable to one-hot encode despite high cardinality
 #to avoid discrepancies test-training because not same categories
 FIXED_CATEGORIES = {
-    "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], }
-#NO_ACTION_HIGH_CARDINALITY = ["client_departement"] #No target encoding
+    "courtier_segmentation_interne": ['Groupements','Sommeil','Challenger','Potentiel','CMA','Nouveau','Miltis','VADISTE','Filiale','Non catégorisé','Opportuniste','Dilemme','Inactif à relancer','Potentiel Agent','Partenariats','VIP', 'Alptis', 'Petit Producteur'], 
+    "interaction_motif": ['interaction_motif_adhesion', 'interaction_motif_ajout_d_un_ayant_droit', 'interaction_motif_ajout_de_garanties', 'interaction_motif_audioprothese', 'interaction_motif_augmentation_de_garanties', 'interaction_motif_autre', 'interaction_motif_ayants-droit', 'interaction_motif_baisse_de_garanties', 'interaction_motif_changement_de_statut', 'interaction_motif_cures_thermales', 'interaction_motif_deces', 'interaction_motif_demande_de_documents', 'interaction_motif_demande_de_radiation_mais_souhaite_une_etude', 'interaction_motif_demandes_generales', 'interaction_motif_dentaire', 'interaction_motif_dependance', 'interaction_motif_donnees_administratives', 'interaction_motif_frais_courants', 'interaction_motif_garanties_associees', 'interaction_motif_hospitalisation', 'interaction_motif_indemnites_journalieres', 'interaction_motif_madelin', 'interaction_motif_medecine_douce', 'interaction_motif_modalites_de_reglement', 'interaction_motif_modification_de_garantie', 'interaction_motif_montant_des_cotisations', 'interaction_motif_optique', 'interaction_motif_recouvrement', 'interaction_motif_rente_d_invalidite', 'interaction_motif_resiliation', 'interaction_motif_soins_a_l_etranger_(dont_suisse)', 'interaction_motif_teletransmission', 'interaction_motif_tiers_payant']
+        }
 
 COLUMNS_ORDINAL = {
     "age_categories": AGE_LABELS,           # ['young', 'adult', 'mature', ...]
     "courtier_anciennete_categories": ANCIENNETE_LABELS,
     'client_frequence_paiement': ['SEM','MS','TRIM','AN'], #valeurs de frequence paiement ordonnées
+    "client_nps_category_n":  ["detractor", "passive", "promoter", "No_answer"]
 }
 
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
 TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
-TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation"]
+TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation", "derniere_interaction_date"]
+
+FORCE_CATEGORICAL = [
+    "client_departement",
+    "client_code_apporteur",
+    "client_code_partenaire",] #columns to encode despite being numericals since its categories in reality
 
 #----------ENVIRONNEMENT SETTING--------------------------
-
-# Load environment variables
-load_dotenv(override=True)
-
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # To load locally or from S3
@@ -77,12 +112,12 @@ DATA_RAW_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 # S3 config
-S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT", "")
+S3_ENDPOINT = "minio-simple.lab.groupe-genes.fr"
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN", "")
-S3_BUCKET = os.getenv("AWS_BUCKET_NAME", "projet-bdc-data")
-S3_DATA_PROCESSED_BUCKET= os.getenv("AWS_PROCESSED_DATA_BUCKET_NAME", "/kbourbon/projet-bdc-alptis-g2") #where the data processed (validation/training) is saved after pre-processing 
+S3_BUCKET = "projet-bdc-data"
+S3_DATA_PROCESSED_BUCKET= "projet-bdc-alptis-g2" #where the data processed (validation/training) is saved after pre-processing 
 S3_VERIFY_SSL = False
 
 
@@ -122,3 +157,13 @@ DATASET_MAPPING = {
     "evaluation": EVALUATION_FILES,
     "validation": VALIDATION_FILES,  
 }
+
+
+#MLFLOW setting
+MLFLOW_TRACKING_INSECURE_TLS ="true" #disable TSL
+MLFLOW_DISABLE_UV_ENV_DETECTION ="true" #to avoid uv to be detected
+S3_BUCKET_ARTIFACT_TRAINING="s3://projet-bdc-alptis-g2/Artifacts_model_training"
+MLFLOW_S3_IGNORE_TLS="true"
+MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
+MLFLOW_TRACKING_URI= "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
+MLFLOW_TRACKING_USERNAME= "projet-bdc-data"
