@@ -54,7 +54,7 @@ COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commun
                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
-COLUMNS_TO_PROCESSED_WITH_NLP= ['interaction_historique_mail',"client_nps_verbatim_n", "client_nps_verbatim_n_moins1"]
+COLUMNS_TO_PROCESSED_WITH_NLP= ["client_nps_verbatim_n", "client_nps_verbatim_n_moins1"] # retrait 'interaction_historique_mail'
 
 
 #----FEATURES ENGINEERING----------------
