@@ -11,7 +11,7 @@ from hdbscan import HDBSCAN
 from sklearn.feature_extraction.text import CountVectorizer
 
 
-nlp = spacy.load("fr_core_news_md")
+nlp = spacy.load("fr_core_news_md", disable=["parser", "ner"])
 
 EMAIL_NOISE_PATTERNS = [
     # placeholders / balises techniques
@@ -51,6 +51,9 @@ EMAIL_NOISE_PATTERNS = [
     
     # références automatiques
     r"\bref\s*:\s*[_a-zA-Z0-9\.-]+\b",
+
+    # Phrases automatiques
+    r"\bRemarque : pour se protéger des virus informatiques, les programmes de messagerie électronique peuvent interdire la réception de certains types de fichiers en pièce jointe. Vérifiez les paramètres de sécurité de votre messagerie électronique pour savoir comment sont gérées les pièces jointes.\b"
 ]
 
 CUSTOM_STOPWORDS = {
@@ -111,7 +114,7 @@ class EmailBERTopicNoLeakagePipeline:
             umap_model=self.umap_model,
             hdbscan_model=self.hdbscan_model,
             vectorizer_model=self.vectorizer_model,
-            calculate_probabilities=True,
+            calculate_probabilities=False,
             verbose=True
         )
 
@@ -205,53 +208,39 @@ class EmailBERTopicNoLeakagePipeline:
         return text
 
     @staticmethod
-    def clean_french_email_tokens(
-        text: str,
-        keep_negation: bool = True,
-        min_token_len: int = 2
-    ) -> str:
-        text = EmailBERTopicNoLeakagePipeline.remove_noise_patterns(text)
-        if not text:
-            return ""
-        
-        doc = nlp(text)
-        cleaned_tokens = []
-        
+    def clean_french_email_tokens_batch(texts, keep_negation=True, min_token_len=2):
         negation_words = {"ne", "pas", "plus", "jamais", "aucun", "rien"}
-        
-        for token in doc:
-            if token.is_space or token.is_punct:
-                continue
-            
-            lemma = token.lemma_.lower().strip()
-            surface = token.text.lower().strip()
-            
-            # fallback si lemma absent ou bizarre
-            if not lemma or lemma == "-pron-":
-                lemma = surface
-            
-            lemma_no_acc = EmailBERTopicNoLeakagePipeline.strip_accents(lemma)
-            
-            # garder la négation si souhaité
-            if keep_negation and lemma_no_acc in negation_words:
+        cleaned = []
+
+        for doc in nlp.pipe(texts, batch_size=256):
+            cleaned_tokens = []
+            for token in doc:
+                if token.is_space or token.is_punct:
+                    continue
+
+                lemma = token.lemma_.lower().strip() if token.lemma_ else token.text.lower().strip()
+                if lemma == "-pron-":
+                    lemma = token.text.lower().strip()
+
+                lemma_no_acc = EmailBERTopicNoLeakagePipeline.strip_accents(lemma)
+
+                if keep_negation and lemma_no_acc in negation_words:
+                    cleaned_tokens.append(lemma_no_acc)
+                    continue
+
+                if token.is_stop:
+                    continue
+                if lemma_no_acc in CUSTOM_STOPWORDS:
+                    continue
+                if re.fullmatch(r"[_\W\d]+", lemma_no_acc):
+                    continue
+                if len(lemma_no_acc) < min_token_len:
+                    continue
+
                 cleaned_tokens.append(lemma_no_acc)
-                continue
-            
-            # stopwords généraux spaCy + stopwords métier/email
-            if token.is_stop:
-                continue
-            if lemma_no_acc in CUSTOM_STOPWORDS:
-                continue
-            
-            # filtrage tokens parasites
-            if re.fullmatch(r"[_\W\d]+", lemma_no_acc):
-                continue
-            if len(lemma_no_acc) < min_token_len:
-                continue
-            
-            cleaned_tokens.append(lemma_no_acc)
-        
-        return " ".join(cleaned_tokens)
+
+            cleaned.append(" ".join(cleaned_tokens))
+        return cleaned
 # --------------------
 
     @staticmethod
@@ -285,7 +274,10 @@ class EmailBERTopicNoLeakagePipeline:
         ].copy()
 
         print('entame du cleaning complet avec les regex et spacy')
-        email_rows["text_clean"] = [self.clean_french_email_tokens(t) if isinstance(t, str) else "" for t in email_rows["text_clean"]]
+        texts = email_rows["text_clean"].tolist()
+        texts = [self.remove_noise_patterns(t) for t in texts]
+        email_rows["text_clean"] = self.clean_french_email_tokens_batch(texts)
+        #email_rows["text_clean"] = [self.clean_french_email_tokens(t) if isinstance(t, str) else "" for t in email_rows["text_clean"]]
         print('Fin du cleaning complet avec les regex et spacy')
 
         return email_rows
@@ -296,7 +288,7 @@ class EmailBERTopicNoLeakagePipeline:
         client_col: str = "client_code",
         date_col: str = "interaction_date",
         text_col: str = "objet_contenu",
-        batch_size: int = 64
+        batch_size: int = 256
     ) -> pd.DataFrame:
         """
         Fit BERTopic sur les emails du train uniquement.
@@ -349,6 +341,7 @@ class EmailBERTopicNoLeakagePipeline:
         if not self.is_fitted:
             raise RuntimeError("Le modèle doit être entraîné via fit_email_topics() avant transform_email_topics().")
 
+        print("début de préparation des lignesemail")
         email_rows = self._prepare_email_rows(
             df=df_new,
             client_col=client_col,
@@ -361,9 +354,11 @@ class EmailBERTopicNoLeakagePipeline:
             email_rows["topic_confidence"] = pd.Series(dtype="float")
             return email_rows
 
+        print("début de l'encodage des emails")
         docs = email_rows["text_clean"].tolist()
         embeddings = self.embedding_model.encode(docs, show_progress_bar=False)
 
+        print("début de la transformation du topic modelling")
         topics, probs = self.topic_model.transform(docs, embeddings)
 
         email_rows["topic"] = topics
@@ -603,7 +598,7 @@ class EmailBERTopicNoLeakagePipeline:
         final_df = other_features.join(topic_features, how="left")
         final_df = final_df.reset_index()
 
-        return final_df
+        return final_df, df_topics
 
     @staticmethod
     def align_feature_columns(
@@ -644,3 +639,54 @@ class EmailBERTopicNoLeakagePipeline:
                 y_outputs.append(df_[target_col])
 
         return outputs[0], outputs[1], outputs[2], y_outputs[0], y_outputs[1], y_outputs[2]
+
+"""
+    @staticmethod
+    def clean_french_email_tokens(
+        text: str,
+        keep_negation: bool = True,
+        min_token_len: int = 2
+    ) -> str:
+        text = EmailBERTopicNoLeakagePipeline.remove_noise_patterns(text)
+        if not text:
+            return ""
+        
+        doc = nlp(text)
+        cleaned_tokens = []
+        
+        negation_words = {"ne", "pas", "plus", "jamais", "aucun", "rien"}
+        
+        for token in doc:
+            if token.is_space or token.is_punct:
+                continue
+            
+            lemma = token.lemma_.lower().strip()
+            surface = token.text.lower().strip()
+            
+            # fallback si lemma absent ou bizarre
+            if not lemma or lemma == "-pron-":
+                lemma = surface
+            
+            lemma_no_acc = EmailBERTopicNoLeakagePipeline.strip_accents(lemma)
+            
+            # garder la négation si souhaité
+            if keep_negation and lemma_no_acc in negation_words:
+                cleaned_tokens.append(lemma_no_acc)
+                continue
+            
+            # stopwords généraux spaCy + stopwords métier/email
+            if token.is_stop:
+                continue
+            if lemma_no_acc in CUSTOM_STOPWORDS:
+                continue
+            
+            # filtrage tokens parasites
+            if re.fullmatch(r"[_\W\d]+", lemma_no_acc):
+                continue
+            if len(lemma_no_acc) < min_token_len:
+                continue
+            
+            cleaned_tokens.append(lemma_no_acc)
+        
+        return " ".join(cleaned_tokens)
+"""
