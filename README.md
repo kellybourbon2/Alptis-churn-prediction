@@ -60,7 +60,7 @@ Four data preparation pipelines are available, each optimized for different mode
 ### How to Run Data Preparation
 
 ```bash
-uv run prepare_data_enc_nonorm.py             #to prepare data encoded without normalisation for example 
+uv run python prepare_data_enc_nonorm.py             #to prepare data with encoding but without normalisation for example 
 ```
 ### Architecture: Avoiding Data Leakage
 
@@ -177,11 +177,9 @@ Models training are automatically dumped into `bdc-alptis-g2/Artifacts_model_tra
 
 To ensure full reproducibility of experiments across the Alptis team, we maintain a containerized infrastructure using Docker, MLflow, and Argo Workflows. This allows anyone to run the complete training pipeline on the processed dataset.
 
-## Environment Setup & Credentials (Read This First!)
+## Environment Setup & Credentials 
 
-All three deployment modes (local development, single model training, Argo Workflow) require proper credential configuration. Set this up once and reuse for all modes.
-
-### AWS S3 Access
+### S3 Storage Access
 
 Create `.env` file in project root:
 ```bash
@@ -197,7 +195,7 @@ AWS_SESSION_TOKEN=...
 
 ⚠️ **Note**: `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
 
-### MLflow Tracking (Optional for Local, Required for Argo)
+### MLflow Tracking (Required for Model Training)
 
 For tracking results on the shared MLflow server, add to `.env`:
 ```ini
@@ -207,8 +205,6 @@ MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
 ```
 
 **Get MLFLOW_TRACKING_PASSWORD from**: Onyxia Genes → **My Services** → **Project: projet-bdc-data** → Service **"Alptis-churn-mlflow-g2"** → copy password from service details.
-
-**Important**: `.env` is git-ignored (never commit credentials).
 
 ## Directory Structure for Reproducibility
 
