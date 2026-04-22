@@ -33,7 +33,7 @@ test_processor.normalized_columns    = train_processor.normalized_columns
 test_processor.missing_indicator_cols    = train_processor.missing_indicator_cols
 
 #processing of validation set
-df_test = test_processor.run_transform(optional_encoding=False, optional_normalisation=False)
+df_test = test_processor.run_transform(optional_encoding=True, optional_normalisation=False)
 
 # Split test/validation
 X_train = df_train.drop(columns=[Config.TARGET_COLUMN, Config.KEY_COLUMN])

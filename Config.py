@@ -50,7 +50,7 @@ REFERENCE_DATES = {
 
 FILES_TO_DROP= [] #drop all the columns that begin with that
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
-                    "courtier_code_apporteur", "courtier_code_partenaire", #to avoid overfitting
+                     #to avoid overfitting: "courtier_code_apporteur", "courtier_code_partenaire"
                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
@@ -167,3 +167,6 @@ MLFLOW_S3_IGNORE_TLS="true"
 MLFLOW_S3_ENDPOINT_URL="https://minio-simple.lab.groupe-genes.fr"
 MLFLOW_TRACKING_URI= "https://projet-bdc-data-mlflow.lab.groupe-genes.fr"
 MLFLOW_TRACKING_USERNAME= "projet-bdc-data"
+
+#Final model for analysis of result
+S3_BUCKET_FINAL_MODELS= "s3://projet-bdc-alptis-g2/model"

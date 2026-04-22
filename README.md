@@ -110,7 +110,7 @@ S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 
 # Model Training
 
-The model training pipeline supports multiple algorithms optimized for churn prediction. All training scripts are located in `src/models/` and are configured through `src/models/config/training_config.yaml`.
+The model training pipeline supports multiple algorithms optimized for churn prediction. All training scripts are located in `src/models_training/` and are configured through `src/models_training/config/training_config.yaml`.
 
 ## Supported Models
 
@@ -149,7 +149,7 @@ To train and evaluate a specific model:
 uv sync
 source .venv/bin/activate
 # Run a specific model, for example xgboost
-uv run python src/models/train_xgboost.py   
+uv run python src/models_training/train_xgboost.py   
 ```
 
 Each training script will:
@@ -221,9 +221,9 @@ The following files and directories are essential for experiment reproducibility
 │   ├── prepare_data_enc_nonorm.py
 │   ├── prepare_data_noenc_nonorm_duplicatemissing.py
 │   └── prepare_data_enc_nonorm_duplicatemissing.py
-├── src/models/config/           # Model configuration
+├── src/models_training/config/           # Model configuration
 │   └── training_config.yaml     # Hyperparameters for all 6 models
-├── src/models/                  # Model training scripts
+├── src/models_training/                  # Model training scripts
 │   ├── train_xgboost.py
 │   ├── train_lightgbm.py
 │   ├── train_catboost.py
@@ -241,7 +241,7 @@ The following files and directories are essential for experiment reproducibility
 S3 raw data (bdc-alptis-g2/raw_data/) 
   → src/data_preparation/ 
   → S3 processed data (bdc-alptis-g2/processed_data/) 
-  → src/models/ (loads from S3)
+  → src/models_training/ (loads from S3)
   → S3 artifacts + MLflow (logs results)
 ```
 
@@ -250,7 +250,7 @@ S3 raw data (bdc-alptis-g2/raw_data/)
 Local data/train, data/validation, data/test
   → src/data_preparation/ 
   → S3 processed data 
-  → src/models/ 
+  → src/models_training/ 
   → Optional MLflow logging
 ```
 

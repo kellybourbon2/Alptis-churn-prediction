@@ -52,7 +52,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_xgboost.py"
+                value: "src/models_training/train_xgboost.py"
 
         - name: train-lightgbm
           dependencies: [enc-no-norm-duplicates-missing]
@@ -60,7 +60,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_lightgbm.py"
+                value: "src/models_training/train_lightgbm.py"
 
         - name: train-histgb
           dependencies: [enc-no-norm]
@@ -68,7 +68,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_histgb.py"
+                value: "src/models_training/train_histgb.py"
 
         #catboost
         - name: train-catboost 
@@ -77,7 +77,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_catboost.py"
+                value: "src/models_training/train_catboost.py"
 
         - name: train-random-forest
           dependencies: [enc-no-norm]
@@ -85,7 +85,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_random_forest.py"
+                value: "src/models_training/train_random_forest.py"
 
 
         # Logistic Regression (enc_norm)
@@ -95,7 +95,7 @@ spec:
           arguments:
             parameters:
               - name: script
-                value: "src/models/train_logistic_regression.py"
+                value: "src/models_training/train_logistic_regression.py"
 
   # ─────────────────────── DATA PREP TEMPLATE ────────────────────
   - name: prepare-data
