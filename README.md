@@ -32,74 +32,36 @@ Four data preparation pipelines are available, each optimized for different mode
   - Encodes categorical features (target encoding, ordinal encoding)
   - Normalizes numerical features using StandardScaler
   - Prevents data leakage by fitting scaler only on training data
-- **When to use**: Linear models that benefit from normalized features
+
 
 #### 2. **prepare_data_enc_nonorm.py** - Encoded, Not Normalized
 - **Output suffix**: `enc_nonorm`
-- **Use for**: XGBoost, LightGBM, HistGradientBoosting, Random Forest
+- **Use for**: HistGradientBoosting, Random Forest
 - **Process**:
   - Encodes categorical features (target encoding, ordinal encoding)
-  - Keeps numerical features in original scale
-  - Faster than normalized variant
-- **When to use**: Tree-based models that are invariant to feature scaling
 
 #### 3. **prepare_data_noenc_nonorm_duplicatemissing.py** - Raw Features + Missing Indicators
 - **Output suffix**: `noenc_nonorm`
 - **Use for**: CatBoost (handles categorical features natively)
 - **Process**:
-  - NO categorical encoding (keeps raw categorical values)
-  - NO normalization of numerical features
+  - No encoding or normalisation
   - Adds missing value indicator columns for columns with NaN values
-  - Example: if column `age` has missing values, creates `age_missing` (binary flag)
-- **When to use**: CatBoost which has native support for categorical features and benefits from missing value indicators
+  - Example: if column `client_age` has missing values that were imputed, creates `client_age_missing` with remaining missing values
 
-#### 4. **prepare_data_enc_nonorm_duplicatemissing.py** - Encoded + Missing Indicators (Experimental)
+#### 4. **prepare_data_enc_nonorm_duplicatemissing.py** - Encoded + Missing Indicators 
 - **Output suffix**: `enc_nonorm_missing`
 - **Use for**: Testing with missing value indicators on tree models
 - **Process**:
   - Encodes categorical features
   - NO normalization
   - Adds missing value indicator columns
-- **When to use**: Research/experimentation to compare impact of missing indicators
 
-## How to Run Data Preparation
 
-### Run All Preparation Variants
+### How to Run Data Preparation
 
 ```bash
-# Prepare all data variants in parallel
-cd src/data_preparation
-python prepare_data_enc_norm.py                    # Logistic Regression data
-python prepare_data_enc_nonorm.py                  # Tree-based models data
-python prepare_data_noenc_nonorm_duplicatemissing.py  # CatBoost data
+uv run prepare_data_enc_nonorm.py             #to prepare data encoded without normalisation for example 
 ```
-
-### Run Single Variant
-
-```bash
-# Prepare only one variant
-cd src/data_preparation
-python prepare_data_enc_norm.py
-```
-
-### In Argo Workflow
-
-The workflow automatically runs all three variants in parallel as the first step:
-
-```yaml
-# From argo_workflows/train_pipeline.yaml
-tasks:
-  - name: prepare-data-enc-norm
-    template: prepare-data
-    arguments:
-      parameters:
-        - name: script
-          value: "src/data_preparation/prepare_data_enc_norm.py"
-  # ... similar for other variants
-```
-
-## Data Preparation Pipeline Details
-
 ### Architecture: Avoiding Data Leakage
 
 Each preparation script follows this strict pattern to prevent data leakage:
@@ -112,7 +74,7 @@ df_train = train_processor.run(optional_encoding=True, optional_normalisation=Tr
 # 2. Create TRANSFORM processor for validation/test data
 test_processor = DataProcessor(mode="validation")
 
-# 3. Pass fitted transformers to test processor (CRITICAL!)
+# 3. Pass fitted transformers to test processor 
 test_processor.scaler = train_processor.scaler          # Use training scaler
 test_processor.target_encoding_maps = train_processor.target_encoding_maps  # Use training encoding
 
@@ -145,25 +107,6 @@ The destination S3 bucket can be modified in `Config.py`:
 ```python
 S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 ```
-
-Data loading source is controlled by `LOAD_FROM_S3` in `Config.py`:
-- `LOAD_FROM_S3 = True`: Loads raw data from S3 (default for Argo Workflow)
-- `LOAD_FROM_S3 = False`: Loads raw data from local `data/` folder
-
-## Model to Data Format Mapping
-
-The training configuration automatically links each model to its data format:
-
-| Model | Data Format | Script | Encoding | Normalization |
-|-------|-------------|--------|----------|---------------|
-| Logistic Regression | `enc_norm` | `prepare_data_enc_norm.py` | ✓ | ✓ |
-| Random Forest | `enc_nonorm` | `prepare_data_enc_nonorm.py` | ✓ | ✗ |
-| XGBoost | `enc_nonorm` | `prepare_data_enc_nonorm.py` | ✓ | ✗ |
-| LightGBM | `enc_nonorm` | `prepare_data_enc_nonorm.py` | ✓ | ✗ |
-| HistGradientBoosting | `enc_nonorm` | `prepare_data_enc_nonorm.py` | ✓ | ✗ |
-| CatBoost | `noenc_nonorm` | `prepare_data_noenc_nonorm_duplicatemissing.py` | ✗ | ✗ |
-
-See `src/models/config/training_config.yaml` for the mapping.
 
 # Model Training
 
@@ -206,11 +149,11 @@ To train and evaluate a specific model:
 uv sync
 source .venv/bin/activate
 # Run a specific model, for example xgboost
-uv python src/models/train_xgboost.py   
+uv run python src/models/train_xgboost.py   
 ```
 
 Each training script will:
-1. Load the preprocessed data from S3 (or local storage if configured)
+1. Load the preprocessed data from S3 
 2. Run Optuna hyperparameter optimization with cross-validation
 3. Train the final model with best parameters
 4. Compute SHAP feature importance
@@ -227,50 +170,95 @@ Training results are logged to MLflow including:
 - Trained model artifacts
 - Classification report and confusion matrix
 
-Results are automatically saved to S3 bucket `bdc-alptis-g2/Artifacts_model_training/`
+Models training are automatically dumped into `bdc-alptis-g2/Artifacts_model_training/`
 
 
 # Experiment Reproducibility
 
 To ensure full reproducibility of experiments across the Alptis team, we maintain a containerized infrastructure using Docker, MLflow, and Argo Workflows. This allows anyone to run the complete training pipeline on the processed dataset.
 
+## Environment Setup & Credentials (Read This First!)
+
+All three deployment modes (local development, single model training, Argo Workflow) require proper credential configuration. Set this up once and reuse for all modes.
+
+### AWS S3 Access
+
+Create `.env` file in project root:
+```bash
+cp .env_example .env
+```
+
+Fill in your credentials from **Onyxia Genes** → **My Account** → **Storage Connection**:
+```ini
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_SESSION_TOKEN=...
+```
+
+⚠️ **Note**: `AWS_SESSION_TOKEN` expires periodically and must be refreshed.
+
+### MLflow Tracking (Optional for Local, Required for Argo)
+
+For tracking results on the shared MLflow server, add to `.env`:
+```ini
+MLFLOW_TRACKING_USERNAME=projet-bdc-data
+MLFLOW_TRACKING_PASSWORD=...
+MLFLOW_TRACKING_URI=https://projet-bdc-data-mlflow.lab.groupe-genes.fr/
+```
+
+**Get MLFLOW_TRACKING_PASSWORD from**: Onyxia Genes → **My Services** → **Project: projet-bdc-data** → Service **"Alptis-churn-mlflow-g2"** → copy password from service details.
+
+**Important**: `.env` is git-ignored (never commit credentials).
+
 ## Directory Structure for Reproducibility
 
+The following files and directories are essential for experiment reproducibility:
+
 ```
-├── docker/              # Container configuration
-│   └── Dockerfile       # Image with all dependencies 
-├── argo_workflows/      # Kubernetes workflow 
-│   └── train_pipeline.yaml    # Complete training pipeline orchestration
-├── src/models/config/   # Model configuration
-│   └── training_config.yaml   # Hyperparameters and 
-└── secret.yaml          # Secrets management 
+├── .env                         # Environment variables for S3 and MLFLOW access (git-ignored)
+├── Config.py                    # Data loading & model configuration
+├── secret.yaml                  # Kubernetes secrets for Argo (git-ignored)
+├── docker/                      # Container configuration
+│   └── Dockerfile               # Image with all dependencies + S3 access
+├── src/data_preparation/        # Data transformation scripts for different model types
+│   ├── prepare_data_enc_norm.py
+│   ├── prepare_data_enc_nonorm.py
+│   ├── prepare_data_noenc_nonorm_duplicatemissing.py
+│   └── prepare_data_enc_nonorm_duplicatemissing.py
+├── src/models/config/           # Model configuration
+│   └── training_config.yaml     # Hyperparameters for all 6 models
+├── src/models/                  # Model training scripts
+│   ├── train_xgboost.py
+│   ├── train_lightgbm.py
+│   ├── train_catboost.py
+│   ├── train_random_forest.py
+│   ├── train_logistic_regression.py
+│   └── train_histgb.py
+└── argo_workflows/              # Kubernetes workflow definitions
+    └── train_pipeline.yaml      # Complete pipeline orchestration
+```
+
+### Data & Result Flow
+
+**With S3 Loading** (default for Argo Workflow):
+```
+S3 raw data (bdc-alptis-g2/raw_data/) 
+  → src/data_preparation/ 
+  → S3 processed data (bdc-alptis-g2/processed_data/) 
+  → src/models/ (loads from S3)
+  → S3 artifacts + MLflow (logs results)
+```
+
+**With Local Loading** (for development):
+```
+Local data/train, data/validation, data/test
+  → src/data_preparation/ 
+  → S3 processed data 
+  → src/models/ 
+  → Optional MLflow logging
 ```
 
 ## Docker - Containerized Environment
-
-The `docker/Dockerfile` encapsulates the complete data processing and training environment:
-- Python environment with all dependencies
-- MLflow integration
-- S3 connectivity
-
-This ensures that experiments run consistently regardless of the local machine setup.
-
-**Benefit**: Anyone with the Dockerfile can recreate the exact same environment that produced the results.
-
-## MLflow - Experiment Tracking
-
-MLflow tracks all training experiments with:
-- Hyperparameters used for each model
-- Performance metrics (ROC-AUC, PR-AUC, F1, etc.)
-- Cross-validation scores
-- Training time and computational resources
-- SHAP feature importance
-- Trained model artifacts
-
-All experiments are logged to the shared MLflow server at: `https://projet-bdc-data-mlflow.lab.groupe-genes.fr/`
-
-
-## Argo Workflows - Pipeline Orchestration
 
 The `argo_workflows/train_pipeline.yaml` defines a complete, automated training pipeline that:
 
@@ -313,7 +301,7 @@ You'll need two services running on Onyxia Genes: Argo Workflows and VSCode.
 
 1. Navigate to **My Services** → **Create a new service**
 2. Select **VSCode** service
-3. ⚠️ **CRITICAL**: Set role to **"Admin"** (required for kubectl/Argo access)
+3. ⚠️ **Important**: Set role to **"Admin"** (required for kubectl/Argo access)
 4. Deploy and open the VSCode service
 
 In the VSCode terminal:
@@ -327,45 +315,33 @@ cd Alptis-churn-prediction
 uv sync
 ```
 
-## Step 3: Configure Kubernetes Secrets
+## Step 3: Create Kubernetes Secrets File
 
-The pipeline needs access to AWS S3 and MLflow. Store these credentials securely using Kubernetes secrets.
-
-### 4.1 Create secret.yaml
-
-Create a file `secret.yaml` in the project root:
+Since Argo runs in Kubernetes, create `secret.yaml` using the credentials from `.env`:
 
 ```yaml
-cp secret_template.yaml secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: env-secrets
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: <from .env file>
+  AWS_SECRET_ACCESS_KEY: <from .env file>
+  AWS_SESSION_TOKEN: <from .env file>
+  MLFLOW_TRACKING_PASSWORD: <from Onyxia MLflow service>
 ```
 
-### 4.2 Find Your Credentials
-
-**AWS Credentials:**
-- Log into **Onyxia Genes**
-- Go to **My Account** → **Storage Connection**
-- Copy the three values: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
-
-**MLflow Password:**
-- In Onyxia Genes, go to **My Services** → **Project: projet-bdc-data**
-- Find the shared service **"Alptis-churn-mlflow-g2"** (shared with your team)
-- Open it and copy the password from the service details
-
-### 4.3 Apply Secrets to Kubernetes
-
+Then apply it to the cluster:
 ```bash
-# Register the secrets with Kubernetes (you're already in your namespace)
 kubectl apply -f ./secret.yaml
-
-# Verify the secret was created
-kubectl get secrets
 ```
 
-## Step 5: Configure the Argo Workflow
+See **"Environment Setup & Credentials"** section above for where to find these values.
 
-### 5.1 Update Workflow Metadata
+## Step 4: Configure & Launch the Argo Workflow
 
-Open `argo_workflows/train_pipeline.yaml` and update the metadata section:
+Open `argo_workflows/train_pipeline.yaml` and update the metadata:
 
 ```yaml
 metadata:
@@ -373,12 +349,8 @@ metadata:
   namespace: your-namespace           # Your Onyxia namespace (from Argo service)
 ```
 
-**Important**: Each experiment must have a unique name. If you reuse a name, it will fail or overwrite the previous run.
+Then submit the workflow:
 
-
-## Step 5: Launch the Workflow
-
-Submit the workflow to Kubernetes:
 
 ```bash
 # Apply the workflow to Kubernetes
@@ -392,15 +364,15 @@ kubectl get workflows
 kubectl describe workflow my_experiment_v1
 ```
 
-## Step 6: Monitor the Workflow Execution
+## Step 5: Monitor the Workflow Execution
 
-### 6.1 Real-time Monitoring in Argo UI
+### 5.1 Real-time Monitoring in Argo UI
 
-1. Open your **Argo Workflows service** (created in Step 2.1)
+1. Open your **Argo Workflows service** (created in Step 1.1)
 2. You should see your workflow listed with the name you specified 
 
 
-### 6.2 Command Line Monitoring
+### 5.2 Command Line Monitoring
 
 ```bash
 # Watch workflow status continuously
@@ -413,11 +385,11 @@ kubectl logs -l workflow=my_experiment_v1,task=train-xgboost -f
 kubectl get events --sort-by='.lastTimestamp'
 ```
 
-## Step 7: View Results in MLflow
+## Step 6: View Results in MLflow
 
 Once the workflow completes, all training results are logged to MLflow.
 
-### 7.1 Access MLflow
+### 6.1 Access MLflow
 
 1. In **Onyxia Genes**, go to **My Services** → **Project: projet-bdc-alptis**
 2. Open the shared service **"Alptis-churn-mlflow-g2"**
