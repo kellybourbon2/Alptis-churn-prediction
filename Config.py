@@ -11,7 +11,7 @@ load_dotenv(override=True)
 #------------------------------------
 
 #name of experiment
-MLFLOW_EXPERIMENT_NAME= " ALPTIS_FINALLLL_WITH_NOMISSINGVALUESNPS"
+MLFLOW_EXPERIMENT_NAME= " ALPTIS_FINAL_WITHOUT_CODE_COURTIER"
 
 #To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
 TRY_FEW_COLUMNS = False
@@ -24,6 +24,8 @@ COLUMNS_TO_KEEP = [
     "client_toujours_engage",
     "nb_jours_forfait_journalier",
     "impaye_duree_max_action_jours",
+    "client_code_apporteur", 
+    "client_code_partenaire"
     "interaction_motif_autre"]
 
 #...or if you prefer just to select the variables to drop : 
@@ -48,6 +50,7 @@ REFERENCE_DATES = {
 
 FILES_TO_DROP= [] #drop all the columns that begin with that
 COLUMNS_TO_DROP = ["client_code_postal", #car on ajoute le revenu médian commune à la place
+                    "courtier_code_apporteur", "courtier_code_partenaire", #to avoid overfitting
                    "client_structure_familiale", "client_nom_banque", "client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n", 'client_nps_date_reponse_n_moins1_jours', ]
 
 #ajouter scores nps dans columns_to_drop et ajouter date_début_effet_garantie ?
@@ -92,6 +95,11 @@ COLUMNS_ORDINAL = {
 #variables that counts days between values of columns and REFERENCE_DATES (becomes: {variable}_jours/mois when created)
 TIMESTAMP_COLUMNS_DAYS = ["client_nps_date_reponse_n_moins1", "client_nps_date_reponse_n"]
 TIMESTAMP_COLUMNS_MONTHS= [ "client_date_debut_effet_garantie", "dernier_paiement_consommation", "derniere_interaction_date"]
+
+FORCE_CATEGORICAL = [
+    "client_departement",
+    "client_code_apporteur",
+    "client_code_partenaire",] #columns to encode despite being numericals since its categories in reality
 
 #----------ENVIRONNEMENT SETTING--------------------------
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

@@ -183,7 +183,7 @@ To ensure full reproducibility of experiments across the Alptis team, we maintai
 
 Create `.env` file in project root:
 ```bash
-cp .env_example .env
+cp .env_template .env
 ```
 
 Fill in your credentials from **Onyxia Genes** → **My Account** → **Storage Connection**:
