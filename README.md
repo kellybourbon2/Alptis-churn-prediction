@@ -355,9 +355,6 @@ kubectl apply -f argo_workflows/train_pipeline.yaml
 # Verify the workflow was submitted
 kubectl get workflows
 # Should list your workflow with status "Running" or "Pending"
-
-# Get detailed status
-kubectl describe workflow my_experiment_v1
 ```
 
 ## Step 5: Monitor the Workflow Execution
@@ -365,21 +362,8 @@ kubectl describe workflow my_experiment_v1
 ### 5.1 Real-time Monitoring in Argo UI
 
 1. Open your **Argo Workflows service** (created in Step 1.1)
-2. You should see your workflow listed with the name you specified 
+2. You should see your workflow listed with the name you specified and the state of the workflow.
 
-
-### 5.2 Command Line Monitoring
-
-```bash
-# Watch workflow status continuously
-kubectl describe workflow my_experiment_v1 -w
-
-# View logs from a specific task (e.g., train-xgboost)
-kubectl logs -l workflow=my_experiment_v1,task=train-xgboost -f
-
-# Get all pod events
-kubectl get events --sort-by='.lastTimestamp'
-```
 
 ## Step 6: View Results in MLflow
 
