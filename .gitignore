@@ -21,6 +21,7 @@ alptis_kb_env/
 *.env
 .env
 *secret.yaml
+secret.yaml
 
 #cache
 __pycache__/
