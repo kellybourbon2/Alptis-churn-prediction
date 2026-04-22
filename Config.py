@@ -11,7 +11,7 @@ load_dotenv(override=True)
 #------------------------------------
 
 #name of experiment
-MLFLOW_EXPERIMENT_NAME= "EXPERIMENT_NAME"
+MLFLOW_EXPERIMENT_NAME= " ALPTIS_FINAL_MODEL_50_TRIALS_5CV"
 
 #To do a test with only a few selected variables: put TRY_FEW_VARIABLES to --> True
 TRY_FEW_COLUMNS = False
