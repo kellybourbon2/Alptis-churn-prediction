@@ -45,7 +45,8 @@ from Config import (
     REVENU_MEDIAN_FRANCE_2021,
     KEY_COLUMN,
     COLUMNS_TO_KEEP,
-    TRY_FEW_COLUMNS
+    TRY_FEW_COLUMNS, 
+    FORCE_CATEGORICAL
 )
 
 
@@ -104,6 +105,7 @@ class DataProcessor:
         self.missing_indicator_cols   = []   # fitted on train, reused on test/val
 
         self.key_column               = KEY_COLUMN
+        self.force_categorical        = FORCE_CATEGORICAL
 
     # ------------------------------------------------------------------
     # Pipelines run()
@@ -211,6 +213,11 @@ class DataProcessor:
         df = df_portefeuille.copy()
         for other_df in [df_reclamations, df_consommations, df_impayes, df_interactions]:
             df = df.merge(other_df, how="left", on=self.key_column)
+
+        # Step 3.5: Force certain numeric columns to be treated as categorical
+        for col in self.force_categorical:
+            if col in df.columns:
+                df[col] = df[col].astype(str).replace("nan", pd.NA)
 
         # Step 4: Feature engineering
         df = feature_engineering(
