@@ -8,6 +8,8 @@ prediction) lives in `src/`. Everything else is supporting material.
 
 
 ##  Structure at a glance
+
+```
 ├── src/                    # All production code — well-commented, source of truth
 ├── notebooks/              # Exploratory analyses (approach & rationale, not exhaustive)
 ├── data_external/          # INSEE external data fed into the processing pipeline
@@ -15,6 +17,7 @@ prediction) lives in `src/`. Everything else is supporting material.
 ├── docker/                 # Containerisation (reproducibility)
 ├── .github/                # CI/CD workflows (reproducibility)
 └── argoworkflow/           # Orchestration configs (reproducibility)
+```
 
 > ⚠️ Raw data are **not versioned** in this repository.  
 > They are externalised to an **S3 bucket on the Onyxia platform** (SSP Cloud).
