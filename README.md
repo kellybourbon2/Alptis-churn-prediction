@@ -38,7 +38,7 @@ For implementation details, refer to the well-commented source code in `src/`.
 | `stacking_model_exploration` | Comparison of stacking architectures; motivates the final ensemble design |
 
 ---
- `src/config.py` — Central configuration file
+ ## `src/config.py` — Central configuration file
 
 **The single source of truth for all pipeline settings.**  
 This file is imported across virtually every module in `src/` and controls:
@@ -51,6 +51,7 @@ This file is imported across virtually every module in `src/` and controls:
 | **MLflow** | `MLFLOW_TRACKING_URI`, `S3_BUCKET_ARTIFACT_TRAINING` | Experiment tracking server and artefact storage |
 ... and more!
 
+---
 ## `CODEBOOK.md`
 
 A full reference dictionary of every feature created during data processing —
