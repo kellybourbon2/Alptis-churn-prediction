@@ -1,7 +1,70 @@
 # BDC-Alptis
 Project part of Ensae "Business Data Challenge" 2025-2026
 
-# Data Preprocessing
+# Repository Overview
+
+All production code (data processing, model training, stacking, and final 
+prediction) lives in `src/`. Everything else is supporting material.
+
+
+##  Structure at a glance
+├── src/                    # All production code — well-commented, source of truth
+├── notebooks/              # Exploratory analyses (approach & rationale, not exhaustive)
+├── data_external/          # INSEE external data fed into the processing pipeline
+├── CODEBOOK.md             # Full reference of all engineered features
+├── docker/                 # Containerisation (reproducibility)
+├── .github/                # CI/CD workflows (reproducibility)
+└── argoworkflow/           # Orchestration configs (reproducibility)
+
+> ⚠️ Raw data are **not versioned** in this repository.  
+> They are externalised to an **S3 bucket on the Onyxia platform** (SSP Cloud).
+
+---
+
+## Notebooks — what they cover
+
+Notebooks document *why* we made certain choices, not *how* the code works.  
+For implementation details, refer to the well-commented source code in `src/`.
+
+| Notebook | Purpose |
+|----------|---------|
+| `Overview_Alptis` | Global overview of the 5 Alptis input files — variable distributions, missingness, key statistics |
+| `mail_analysis` | Exploration of client interaction emails; BERTopic modelling to extract churn-related signals |
+| `nps_analysis` | Analysis of NPS verbatims; BERTopic and churn-signal detection from open-ended responses |
+| `business_analysis` | Price sensitivity scenarios — how simulated price changes shift churn probability |
+| `stacking_model_exploration` | Comparison of stacking architectures; motivates the final ensemble design |
+
+---
+ `src/config.py` — Central configuration file
+
+**The single source of truth for all pipeline settings.**  
+This file is imported across virtually every module in `src/` and controls:
+
+| Category | Examples |
+|----------|---------|
+| Storage | S3 bucket names for data and model, file paths, Onyxia credentials |
+| Data processing | Feature selection, bin definitions, aggregation rules |
+| Encoding | Which variables use ordinal / one-hot / target encoding |
+| **MLflow** | `MLFLOW_TRACKING_URI`, `S3_BUCKET_ARTIFACT_TRAINING` | Experiment tracking server and artefact storage |
+... and more!
+
+## `CODEBOOK.md`
+
+A full reference dictionary of every feature created during data processing —
+variable name, description, source file, and transformation applied.  
+**Start here** if you are trying to understand a specific variable.
+
+---
+
+## Reproducibility folders
+
+The `docker/`, `.github/`, and `argoworkflow/` directories were used during  
+our experiments and model training runs. They are kept in the repository so  
+that Alptis can fully **retrace and re-run** the pipeline if needed.
+
+They are **not required** for understanding the modelling approach.
+
+# Data Processing
 
 Located in `src/data_processing/`, the preprocessing module handles data cleaning and preparation:
 
@@ -167,6 +230,7 @@ uv run python src/models_training/train_xgboost.py
 ```
 
 Models training are automatically dumped into `bdc-alptis-g2/Artifacts_model_training/`
+
 
 # Experiment Reproducibility
 
