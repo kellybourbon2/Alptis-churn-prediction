@@ -182,7 +182,7 @@ S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 | `model_bertopic.py` | **Topic modelling** — BERTopic pipeline applied to client email data to extract churn-related signals (e.g. price mentions, dissatisfaction) |
 | `model_saving.py` | **Model I/O utility** — standardised helpers to load and save model artefacts to/from the S3 bucket |
 
-The models on which the final model was stacked from  a logistic regression, a xgboost and a catboost model trained independantly. Next Section gives more details about their training.
+The models on which the final model was stacked from are a logistic regression, a xgboost and a catboost model trained independantly. Next Section gives more details about their training.
 
 
 ## Models training
