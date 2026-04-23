@@ -46,10 +46,8 @@ def portefeuille_cleaning(df_portefeuille, optional_fill_missing_values:bool):
 
         #4-  Imputing NaN in nps score missing with median score
         nps_cols = ["client_nps_note_reco_n", "client_nps_note_reco_n_moins1"]
-        df_portefeuille_cleaned.fillna(
-            {col: 999 for col in nps_cols}, 
-            inplace=True)
-        
+        df_portefeuille_cleaned[nps_cols] = df_portefeuille_cleaned[nps_cols].fillna(
+            df_portefeuille_cleaned[nps_cols].median())
     return df_portefeuille_cleaned
 
 if __name__== "__main__":

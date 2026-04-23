@@ -112,11 +112,18 @@ S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 
 ## Final Model
 
-The final model is a stacked model,  created with the script `src/models/model_stack.py`.
-This model is stacked from three models: LogisticRegression, XGBoost and CatBoost. 
-Those three models were trained independantly, as the next parts explain.
+|------|------|
+| `model_final.py` | **Final prediction pipeline** — runs all models, aggregates outputs, applies a global threshold on decision (0.65) and business-rule clipping (NPS, mail churn mentions, contract commitment) to produce the final churn score |
+| `model_stack.py` | **Stacking ensemble** — meta-learner combining Logistic Regression, XGBoost, and CatBoost; best-performing models are loaded from S3 |
+| `model_baseline_majority_vote.py` | **Baseline model** — majority-vote classifier used as reference benchmark for the stacking ensemble |
+| `model_bertopic.py` | **Topic modelling** — BERTopic pipeline applied to client email data to extract churn-related signals (e.g. price mentions, dissatisfaction) |
+| `model_saving.py` | **Model I/O utility** — standardised helpers to load and save model artefacts to/from the S3 bucket |
+
+The models on which the final model was stacked from  a logistic regression, a xgboost and a catboost model trained independantly. Next Section gives more details about their training.
+
 
 ## Models training
+
 The model training pipeline supports multiple algorithms optimized for churn prediction. All training scripts are located in `src/models_training/` and are configured through `src/models_training/config/training_config.yaml`.
 
 ### Supported Models

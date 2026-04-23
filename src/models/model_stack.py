@@ -11,36 +11,13 @@ from src.data_processing.data_load import load_data_processed_from_S3
 from Config import S3_BUCKET_FINAL_MODELS
 
 
-#Setting so catboost load succeed 
-from src.models.train_catboost import CatBoostAutoCat #import catboost class created
+#Setting of baseline
+from src.models.train_catboost import CatBoostAutoCat
+from src.models.model_baseline_majority_vote import MajorityVoteEnsemble
 import __main__
-__main__.CatBoostAutoCat = CatBoostAutoCat  # inject class catboost in __main__
+__main__.CatBoostAutoCat = CatBoostAutoCat
+__main__.MajorityVoteEnsemble = MajorityVoteEnsemble
 
-
-class MajorityVoteEnsemble:
-    def __init__(self, models, thresholds, names=None):
-        self.models = models
-        self.thresholds = thresholds
-        self.names = names
-
-    def predict_proba(self, X_list):
-        probas = []
-        for model, X in zip(self.models, X_list):
-            p = model.predict_proba(X)[:,1]
-            probas.append(p)
-
-        return np.mean(np.column_stack(probas), axis=1)
-
-    def predict(self, X_list):
-        preds = []
-
-        for model, X, t in zip(self.models, X_list, self.thresholds):
-            p = model.predict_proba(X)[:,1]
-            preds.append((p >= t).astype(int))
-
-        preds = np.column_stack(preds)
-        vote = stats.mode(preds, axis=1).mode.ravel()
-        return vote
 
 def best_threshold_f1(y, proba, name):
     """Trouve le seuil qui maximise le F1"""
@@ -85,13 +62,11 @@ if __name__== "__main__":
     cat_features = X_val_noenc_nonorm.select_dtypes(include=['object', 'category', 'string']).columns.tolist()
     cat_model._cat_features_fitted = cat_features
 
-
     #4- We define the best threshold for each of the three models based on their metrics 
     # (see notebooks/stacking_exploration.ipynb to understand how these threshold were computed)
     t_xgb   = 0.49
     t_cat   = 0.51
     t_lr    = 0.67
-    t_stack = 0.57
 
     #5-Finally, we build the MajorityVoteEnsemble model based on the threshold 
     ensemble = MajorityVoteEnsemble(
