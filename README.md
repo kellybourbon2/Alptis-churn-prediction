@@ -60,7 +60,7 @@ variable name, description, source file, and transformation applied.
 
 ---
 
-## Reproducibility folders
+## Reproductibility folders
 
 The `docker/`, `.github/`, and `argoworkflow/` directories were used during  
 our experiments and model training runs. They are kept in the repository so  
@@ -179,7 +179,7 @@ S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 
 ## Final Model
 
-|------|------|
+|------|------|------|
 | `model_final.py` | **Final prediction pipeline** — runs all models, aggregates outputs, applies a global threshold on decision (0.65) and business-rule clipping (NPS, mail churn mentions, contract commitment) to produce the final churn score |
 | `model_stack.py` | **Stacking ensemble** — meta-learner combining Logistic Regression, XGBoost, and CatBoost; best-performing models are loaded from S3 |
 | `model_baseline_majority_vote.py` | **Baseline model** — majority-vote classifier used as reference benchmark for the stacking ensemble |
@@ -306,7 +306,6 @@ S3 raw data (bdc-alptis-g2/raw_data/)
   → src/models_training/ (loads from S3)
   → S3 artifacts + MLflow (logs results)
 ```
-
 
 ## Docker - Containerized Environment
 
