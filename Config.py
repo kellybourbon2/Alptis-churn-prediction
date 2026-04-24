@@ -7,6 +7,14 @@ import pandas as pd
 # Load variables from secret file
 load_dotenv(override=True)
 
+#----------MODEL PARAMETERS--------------
+GLOBAL_THRESHOLD= 0.5
+
+#to know how below optimal threshold have been computed see notebooks/Stacking_models_exploration
+XGBOOST_THRESHOLD=0.49
+CATBOOST_THRESHOLD=0.54
+LOGREG_THRESHOLD=0.67
+
 #------TRAINING EXPERIMENT --------------
 #------------------------------------
 

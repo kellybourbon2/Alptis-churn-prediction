@@ -11,7 +11,6 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from Config import MLFLOW_EXPERIMENT_NAME, S3_BUCKET_ARTIFACT_TRAINING, S3_BUCKET_FINAL_MODELS
 from src.data_processing.data_load import Config  # reuse same S3 config
-from src.models.model_baseline_majority_vote import MajorityVoteEnsemble
 
 def save_model_to_s3(
     model,

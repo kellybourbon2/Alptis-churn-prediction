@@ -180,9 +180,9 @@ S3_DATA_PROCESSED_BUCKET = "bdc-alptis-g2/processed_data"
 ## Final Model
 
 |------|------|------|
-| `model_final.py` | **Final prediction pipeline** — runs all models, aggregates outputs, applies a global threshold on decision (0.65) and business-rule clipping (NPS, mail churn mentions, contract commitment) to produce the final churn score |
-| `model_stack.py` | **Stacking ensemble** — meta-learner combining Logistic Regression, XGBoost, and CatBoost; best-performing models are loaded from S3 |
-| `model_baseline_majority_vote.py` | **Baseline model** — majority-vote classifier used as reference benchmark for the stacking ensemble |
+| `final_prediction.py` | **Final prediction pipeline** — load the stacked model, named "ensemble_model", saved in Config.S3_BUCKET_FINAL_MODEL --> output the final csv with prediction, probabilities and client_code|
+| `model_stack.py` | **Stacking ensemble** — meta-learner combining the best Logistic Regression, XGBoost, and CatBoost loaded from Config.S3_BUCKET_FINAL_MODEL --> save the stacked model in Config.S3_FINAL_BUCKET_FINAL_MODEL under the name "ensemble_model" |
+| `model_baseline.py` | **Baseline model** — SoftVoteEnsemble used as reference benchmark for the stacking ensemble |
 | `model_bertopic.py` | **Topic modelling** — BERTopic pipeline applied to client email data to extract churn-related signals (e.g. price mentions, dissatisfaction) |
 | `model_saving.py` | **Model I/O utility** — standardised helpers to load and save model artefacts to/from the S3 bucket |
 
@@ -295,9 +295,9 @@ The following files and directories are essential for experiment reproducibility
 │   └── train_histgb.py
 └── argo_workflows/              # Kubernetes workflow definitions
     └── train_pipeline.yaml      # Complete pipeline orchestration
-    ```
+```
 
-    ### Data & Result Flow
+### Data & Result Flow
 
 ```
 S3 raw data (bdc-alptis-g2/raw_data/) 
