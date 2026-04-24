@@ -8,7 +8,7 @@ import pandas as pd
 load_dotenv(override=True)
 
 #----------MODEL PARAMETERS--------------
-GLOBAL_THRESHOLD= 0.5
+GLOBAL_THRESHOLD= 0.55
 
 #to know how below optimal threshold have been computed see notebooks/Stacking_models_exploration
 XGBOOST_THRESHOLD=0.49
